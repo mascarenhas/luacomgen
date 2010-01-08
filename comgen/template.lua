@@ -66,13 +66,13 @@ $methods[[
 static int $(modname)_$(methodname)(lua_State *L) {
   void *ud = lua_touserdata(L, 1);
   $ifname *p = *(($ifname **)ud);
-$parameters[[  $type $name;
-$if{init}[[  $init{name, pos}
+$parameters[[  $ctype $name;
+$if{init}[[  $init{name, pos, type}
 ]]]]
   HRESULT hr = p->$cname($concat{parameters}[[$pass]]);
   if(SUCCEEDED(hr)) {
     $pushret
-$parameters[[$if{push}[[    $push{name}
+$parameters[[$if{push}[[    $push{name,type}
 ]]]]
     return $nresults;
   } else {

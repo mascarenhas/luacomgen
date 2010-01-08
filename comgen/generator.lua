@@ -9,8 +9,29 @@ EXPORTS
     luaopen_$modname
 ]]
 
+local template_init_enum = [[
+  lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_enums");
+  lua_getfield(L, $(type.typedef));
+  lua_pushvalue(L, $stkidx);
+  lua_gettable(L, -2);
+  $var = luaL_checkinteger(L, -1);
+  lua_pop(L, 3);
+]]
+
+local template_push_enum = [[
+  lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_enums");
+  lua_getfield(L, $(type.typedef));
+  lua_pushinteger(L, $var);
+  lua_gettable(L, -2);
+  lua_remove(L, -2);
+  lua_remove(L, -2);
+]]
+
 local comtypes = {
   long = {
+    ctype = function (type)
+	      return type.name
+	    end,
     init = function (args)
 	     return args[1] .. " = luaL_checkinteger(L, " .. args[2] .. ");" 
 	   end,
@@ -18,6 +39,24 @@ local comtypes = {
 	     return "lua_pushinteger(L, " .. args[1] .. ");"
 	   end
   },
+  enum = {
+    ctype = function (type)
+	      return type.typedef
+	    end,
+    init = function (args)
+	     return template_init_enum{ type = args[3], stkidx = args[2], var = args[1] }
+	   end,
+    push = function (args)
+	     return template_push_enum{ type = args[2], var = args[1] }
+	   end,
+  }
+}
+
+_M.types = {
+  long = { name = "long" },
+  enum = function (typedef)
+	   return { name = "enum", typedef = typedef }
+	 end
 }
 
 function _M.readfile(filename, s)
@@ -56,20 +95,22 @@ function _M.compile_method(method)
     mdata.cname = "set_" .. method.name
   end
   for i, param in ipairs(method.parameters) do
-    local pdata = { name = param.name, pass = param.name, type = param.type, pos = i + 1 }
+    local typename = param.type.name
+    local pdata = { name = param.name, pass = param.name, type = param.type,
+		    ctype = comtypes[typename].ctype(param.type), pos = i + 1 }
     local attr = param.attributes or {}
     if attr.out and not attr.retval then
       mdata.nresults = mdata.nresults + 1
       pdata.pass = "&" .. param.name
-      pdata.push = comtypes[param.type].push
+      pdata.push = comtypes[typename].push
     end
     if attr.retval then
       mdata.nresults = mdata.nresults + 1
       pdata.pass = "&" .. param.name
-      mdata.pushret = comtypes[param.type].push{ param.name }
+      mdata.pushret = comtypes[typename].push{ param.name, param.type }
     end
     if attr["in"] then
-      pdata.init = comtypes[param.type].init
+      pdata.init = comtypes[typename].init
     end
     table.insert(mdata.parameters, pdata)
   end
