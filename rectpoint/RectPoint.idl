@@ -7,6 +7,11 @@
 import "oaidl.idl";
 import "ocidl.idl";
 
+typedef enum {
+  FILLED = 1,
+  DOTTED
+} RECTTYPE;
+
 	[
 		object,
 		uuid(CCA7F35D-DAF3-11D0-8C53-0080C73925BA),
@@ -30,6 +35,7 @@ import "ocidl.idl";
 	{
 		[helpstring("method SetCoords")] HRESULT SetCoords([in] long left, [in] long top, [in] long right, [in] long bottom);
 		[propget, helpstring("property Volume")] HRESULT Volume([out, retval] long *pVal);
+	        HRESULT DrawRect([in] RECTTYPE type, [out, retval] long *res);
 	};
 [
 	uuid(CCA7F350-DAF3-11D0-8C53-0080C73925BA),

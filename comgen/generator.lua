@@ -9,19 +9,19 @@ EXPORTS
     luaopen_$modname
 ]]
 
-local template_init_enum = [[
+local template_init_enum = cosmo.compile[[
   lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_enums");
-  lua_getfield(L, "$(type.typedef)");
+  lua_getfield(L, -1, "$(type.typedef)");
   lua_pushvalue(L, $stkidx);
   lua_gettable(L, -2);
-  $var = luaL_checkinteger(L, -1);
+  $var = ($(type.typedef))luaL_checkinteger(L, -1);
   lua_pop(L, 3);
 ]]
 
-local template_push_enum = [[
+local template_push_enum = cosmo.compile[[
   lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_enums");
-  lua_getfield(L, "$(type.typedef)");
-  lua_pushinteger(L, $var);
+  lua_getfield(L, -1, "$(type.typedef)");
+  lua_pushinteger(L, (int)$var);
   lua_gettable(L, -2);
   lua_remove(L, -2);
   lua_remove(L, -2);

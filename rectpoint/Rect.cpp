@@ -33,3 +33,8 @@ STDMETHODIMP CRect::get_Volume(long * pVal)
       *pVal = (right - left) * (bottom - top);
     return hr;
 }
+
+STDMETHODIMP CRect::DrawRect(/* [in] */ RECTTYPE type, /* [retval][out] */ long *res) {
+  *res = (int)type;
+  return S_OK;
+}

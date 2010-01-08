@@ -45,6 +45,13 @@ local IRect = {
       parameters = {
 	{ type = types.long, attributes = { out = true, retval = true }, name = "pVal" }
       }
+    },
+    {
+      name = "DrawRect",
+      parameters = {
+	{ type = types.enum("RECTTYPE"), attributes = { ["in"] = true }, name = "type" },
+	{ type = types.long, attributes = { out = true, retval = true }, name = "res" }
+      }
     }
   }
 }

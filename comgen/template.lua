@@ -76,7 +76,7 @@ static void comgen_registerenum(lua_State *L, const char *enum_name, const comge
 
 $enums[[
 
-static comgen_enum $(modname)_$(name)_fields[] = {
+static comgen_enum $(name)_fields[] = {
 $fields[[  { "$name", $value },
 ]]
   { NULL, 0 }
@@ -125,7 +125,7 @@ $interfaces[[
   comgen_fillmethods(L, IID_$(parent)_String, IID_$(ifname)_String, "$ifname", $(ifname)_methods);
 ]]
 $enums[[
-  comgen_registerenum(L, "$(modname)_$name", $(modname)_$(name)_fields);
+  comgen_registerenum(L, "$name", $(name)_fields);
 ]]
   lua_pushboolean(L, 1);
   return 1;

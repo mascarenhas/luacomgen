@@ -47,6 +47,7 @@ END_COM_MAP()
 public:
 	STDMETHOD(get_Volume)(/*[out, retval]*/ long *pVal);
 	STDMETHOD(SetCoords)(/*[in]*/ long left, /*[in]*/ long top, /*[in]*/ long right, /*[in]*/ long bottom);
+	STDMETHOD(DrawRect)(/* [in] */ RECTTYPE type, /* [retval][out] */ long *res);
 private:
 	IPoint *m_topLeft;
 	IPoint *m_bottomRight;
