@@ -162,6 +162,8 @@ extern "C" int luaopen_comgen(lua_State *L) {
     lua_newtable(L);
     lua_setfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
     lua_newtable(L);
+    lua_setfield(L, LUA_REGISTRYINDEX, "luacomgen_enums");
+    lua_newtable(L);
     luaL_register(L, NULL, iunknown_methods);
     iunknown_registermeta(L);
     luaL_register(L, "comgen", comgen_functions);

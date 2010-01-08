@@ -10,6 +10,11 @@ extern "C" {
   #include "lauxlib.h"
 }
 
+typedef struct {
+  char *name;
+  int value;
+} comgen_enum;
+
 static int comgen_error(lua_State *L, HRESULT hr) {
   char sz[1024];
   if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, hr, 0, sz, 1024, 0))
@@ -36,6 +41,7 @@ static void comgen_registermeta(lua_State *L, const char *iid_string, const char
   lua_pushstring(L, ifname);
   lua_setfield(L, -2, "__type");
   lua_setfield(L, -2, iid_string);
+  lua_pop(L, 1);
 }
 
 static void comgen_fillmethods(lua_State *L, const char *iid_parent_string, 
@@ -52,6 +58,31 @@ static void comgen_fillmethods(lua_State *L, const char *iid_parent_string,
   luaL_register(L, NULL, methods);
   comgen_registermeta(L, iid_string, ifname);
 }
+
+static void comgen_registerenum(lua_State *L, const char *enum_name, const comgen_enum *fields) {
+  lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_enums");
+  lua_newtable(L);
+  for(int i = 0; fields[i].name != NULL; i++) {
+    lua_pushstring(L, fields[i].name);
+    lua_pushinteger(L, fields[i].value);
+    lua_settable(L, -3);
+    lua_pushinteger(L, fields[i].value);
+    lua_pushstring(L, fields[i].name);
+    lua_settable(L, -3);
+  }
+  lua_setfield(L, -2, enum_name);
+  lua_pop(L, 1);
+}
+
+$enums[[
+
+static comgen_enum $(modname)_$(name)_fields[] = {
+$fields[[  { "$name", $value },
+]]
+  { NULL, 0 }
+};
+
+]]
 
 $interfaces[[
 
@@ -92,6 +123,9 @@ $methods[[  { "$methodname", $(modname)_$methodname },
 extern "C" int luaopen_$modname(lua_State *L) {
 $interfaces[[
   comgen_fillmethods(L, IID_$(parent)_String, IID_$(ifname)_String, "$ifname", $(ifname)_methods);
+]]
+$enums[[
+  comgen_registerenum(L, "$(modname)_$name", $(modname)_$(name)_fields);
 ]]
   lua_pushboolean(L, 1);
   return 1;

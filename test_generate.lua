@@ -49,10 +49,19 @@ local IRect = {
   }
 }
 
+local RECTTYPE = {
+  name = "RECTTYPE",
+  fields = {
+    { name = "FILLED", value = 1 },
+    { name = "DOTTED", value = 2 }
+  }
+}
+
 local rectpoint = {
   modname = "rectpointlib",
   header = "rectpoint",
-  interfaces = { IRect, IPoint }
+  interfaces = { IRect, IPoint },
+  enums = { RECTTYPE }
 }
 
 local source, def = generator.compile(rectpoint)

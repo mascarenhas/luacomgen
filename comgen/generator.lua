@@ -11,7 +11,7 @@ EXPORTS
 
 local template_init_enum = [[
   lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_enums");
-  lua_getfield(L, $(type.typedef));
+  lua_getfield(L, "$(type.typedef)");
   lua_pushvalue(L, $stkidx);
   lua_gettable(L, -2);
   $var = luaL_checkinteger(L, -1);
@@ -20,7 +20,7 @@ local template_init_enum = [[
 
 local template_push_enum = [[
   lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_enums");
-  lua_getfield(L, $(type.typedef));
+  lua_getfield(L, "$(type.typedef)");
   lua_pushinteger(L, $var);
   lua_gettable(L, -2);
   lua_remove(L, -2);
@@ -138,7 +138,7 @@ function _M.compile(library)
   local libdata = {
     modname = library.modname,
     header = library.header or library.modname,
-    interfaces = {}
+    interfaces = {}, enums = library.enums or {}
   }
   for _, interface in ipairs(library.interfaces) do
     table.insert(libdata.interfaces, _M.compile_interface(interface))
