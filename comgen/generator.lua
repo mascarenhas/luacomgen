@@ -90,9 +90,11 @@ function _M.compile_method(method)
   local attr = method.attributes or {}
   if attr.propget then
     mdata.cname = "get_" .. method.name
+    mdata.methodname = mdata.cname
   end
-  if attr.propset then
+  if attr.propput then
     mdata.cname = "set_" .. method.name
+    mdata.methodname = mdata.cname
   end
   for i, param in ipairs(method.parameters) do
     local typename = param.type.name
