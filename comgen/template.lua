@@ -1,17 +1,14 @@
 
 return [==[
 
-#include "$(modname).h"
-#include "$(modname)_i.c"
+#include "$(header).h"
+#include "$(header)_i.c"
 
 extern "C" {
   #include "lua.h"
   #include "lualib.h"
   #include "lauxlib.h"
 }
-
-#define IID_$(parent)_String "$parent_iid"
-#define IID_$(ifname)_String "$iid"
 
 static int comgen_error(lua_State *L, HRESULT hr) {
   char sz[1024];
@@ -20,6 +17,50 @@ static int comgen_error(lua_State *L, HRESULT hr) {
   luaL_error(L, sz);
   return 0;
 }
+
+static int comobject_gc(lua_State *L) {
+  void *ud = lua_touserdata(L, 1);
+  IUnknown *p = *((IUnknown **)ud);
+  p->Release();
+  p = NULL;
+  return 0;
+}
+
+static void comgen_registermeta(lua_State *L, const char *iid_string, const char *ifname) {
+  lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
+  lua_newtable(L);
+  lua_pushvalue(L, -3);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, comobject_gc);
+  lua_setfield(L, -2, "__gc");
+  lua_pushstring(L, ifname);
+  lua_setfield(L, -2, "__type");
+  lua_setfield(L, -2, iid_string);
+}
+
+static void comgen_fillmethods(lua_State *L, const char *iid_parent_string, 
+			       const char *iid_string, const char *ifname, const luaL_Reg *methods) {
+  lua_newtable(L);
+  int i = lua_gettop(L);
+  lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
+  lua_getfield(L, -1, iid_parent_string);
+  lua_getfield(L, -1, "__index");
+  lua_setfield(L, i, "__index");
+  lua_settop(L, i);
+  lua_pushvalue(L, -1);
+  lua_setmetatable(L, -2);
+  luaL_register(L, NULL, methods);
+  comgen_registermeta(L, iid_string, ifname);
+}
+
+$interfaces[[
+
+#ifndef IID_$(parent)_String
+#define IID_$(parent)_String "$parent_iid"
+#endif
+#ifndef IID_$(ifname)_String
+#define IID_$(ifname)_String "$iid"
+#endif
 
 $methods[[
 static int $(modname)_$(methodname)(lua_State *L) {
@@ -31,7 +72,7 @@ $if{init}[[  $init{name, pos}
   HRESULT hr = p->$cname($concat{parameters}[[$pass]]);
   if(SUCCEEDED(hr)) {
     $pushret
-$parameters[[$if{push}[[    $push{name};
+$parameters[[$if{push}[[    $push{name}
 ]]]]
     return $nresults;
   } else {
@@ -40,44 +81,18 @@ $parameters[[$if{push}[[    $push{name};
 }
 ]]
 
-static int comobject_gc(lua_State *L) {
-  void *ud = lua_touserdata(L, 1);
-  IUnknown *p = *((IUnknown **)ud);
-  p->Release();
-  p = NULL;
-  return 0;
-}
-
-static luaL_Reg $(modname)_methods[] = {
+static luaL_Reg $(ifname)_methods[] = {
 $methods[[  { "$methodname", $(modname)_$methodname },
 ]]
   { NULL, NULL }
 };
 
-static void $(modname)_registermeta(lua_State *L) {
-  lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
-  lua_newtable(L);
-  lua_pushvalue(L, -3);
-  lua_setfield(L, -2, "__index");
-  lua_pushcfunction(L, comobject_gc);
-  lua_setfield(L, -2, "__gc");
-  lua_pushstring(L, "$ifname");
-  lua_setfield(L, -2, "__type");
-  lua_setfield(L, -2, IID_$(ifname)_String);
-}
+]]
 
 extern "C" int luaopen_$modname(lua_State *L) {
-  lua_newtable(L);
-  int i = lua_gettop(L);
-  lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
-  lua_getfield(L, -1, IID_$(parent)_String);
-  lua_getfield(L, -1, "__index");
-  lua_setfield(L, i, "__index");
-  lua_settop(L, i);
-  lua_pushvalue(L, -1);
-  lua_setmetatable(L, -2);
-  luaL_register(L, NULL, $(modname)_methods);
-  $(modname)_registermeta(L);
+$interfaces[[
+  comgen_fillmethods(L, IID_$(parent)_String, IID_$(ifname)_String, "$ifname", $(ifname)_methods);
+]]
   lua_pushboolean(L, 1);
   return 1;
 }

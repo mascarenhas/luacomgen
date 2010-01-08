@@ -1,7 +1,6 @@
 
 require "comgen"
-require "ipoint"
-require "irect"
+require "rectpointlib"
 
 local clsid_point = "{CCA7F35E-DAF3-11D0-8C53-0080C73925BA}"
 local iid_iunknown = "{00000000-0000-0000-C000-000000000046}"

@@ -76,7 +76,7 @@ function _M.compile_method(method)
   return mdata
 end
 
-function _M.compile(interface)
+function _M.compile_interface(interface)
   local ifdata = {
     modname = string.lower(interface.name),
     ifname = interface.name,
@@ -90,7 +90,19 @@ function _M.compile(interface)
   for _, method in ipairs(interface.methods) do
     table.insert(ifdata.methods, _M.compile_method(method))
   end
-  return template(ifdata), template_def(ifdata)
+  return ifdata
+end
+
+function _M.compile(library)
+  local libdata = {
+    modname = library.modname,
+    header = library.header or library.modname,
+    interfaces = {}
+  }
+  for _, interface in ipairs(library.interfaces) do
+    table.insert(libdata.interfaces, _M.compile_interface(interface))
+  end
+  return template(libdata), template_def(libdata)
 end
 
 return _M
