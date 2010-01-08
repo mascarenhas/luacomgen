@@ -1,0 +1,31 @@
+
+
+ATL_INCLUDE_DIR="c:\Program Files\Microsoft Platform SDK for Windows Server 2003 R2\Include\atl"
+MFC_INCLUDE_DIR="c:\Program Files\Microsoft Platform SDK for Windows Server 2003 R2\Include\mfc"
+LIB_DIR="c:\Program Files\Microsoft Platform SDK for Windows Server 2003 R2\lib\ole32.lib"
+
+RectPoint.h: RectPoint.idl
+	midl RectPoint.idl
+
+Point.obj: Point.cpp RectPoint.h
+	cl /c /D "WIN32" /D "_WINDOWS" /D "_USRDLL" /D "_WINDLL" /Gm /EHsc /ZI /TP /I$(ATL_INCLUDE_DIR) Point.cpp
+
+Rect.obj: Rect.cpp RectPoint.h
+	cl /c /D "WIN32" /D "_WINDOWS" /D "_USRDLL" /D "_WINDLL" /Gm /EHsc /ZI /TP /I$(ATL_INCLUDE_DIR) Rect.cpp
+
+RectPoint.obj: RectPoint.cpp RectPoint.h
+	cl /c /D "WIN32" /D "_WINDOWS" /D "_USRDLL" /D "_WINDLL" /Gm /EHsc /ZI /TP /I$(ATL_INCLUDE_DIR) RectPoint.cpp
+
+StdAfx.obj: StdAfx.cpp
+	cl /c /D "WIN32" /D "_WINDOWS" /D "_USRDLL" /D "_WINDLL" /Gm /EHsc /ZI /TP /I$(ATL_INCLUDE_DIR) StdAfx.cpp
+
+RectPoint.res: RectPoint.rc
+	rc /i$(MFC_INCLUDE_DIR) RectPoint.rc
+
+RectPoint.dll: RectPoint.obj Rect.obj Point.obj StdAfx.obj RectPoint.res
+	link /dll /out:RectPoint.dll RectPoint.obj Rect.obj Point.obj StdAfx.obj RectPoint.res $(LIB_DIR) /def:RectPoint.def
+
+all: RectPoint.dll
+
+clean:
+	del *.obj *.dll *.res *.lib *.tlb *.idb *.pdb *.exp RectPoint_?.c dlldata.c RectPoint.h
