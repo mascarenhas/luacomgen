@@ -1,0 +1,25 @@
+
+OLE_LIB="c:\Program Files\Microsoft Platform SDK for Windows Server 2003 R2\lib\ole32.lib"
+LUA="c:\LuaRocks\1.0\lua5.1.exe"
+LUA_INCLUDE_DIR="c:\LuaRocks\1.0\Include"
+LUA_LIB="c:\LuaRocks\1.0\lua51.lib"
+
+comgen.obj: comgen.cpp
+	cl /c /I$(LUA_INCLUDE_DIR) comgen.cpp
+
+comgen.dll: comgen.obj
+	link /dll comgen.obj $(LUA_LIB) $(OLE_LIB) /def:comgen.def
+
+rectpointlib.cpp:
+	$(LUA) -l luarocks.require test_generate.lua
+
+rectpointlib.obj: rectpointlib.cpp
+	cl /c /I$(LUA_INCLUDE_DIR) /Irectpoint rectpointlib.cpp
+
+rectpointlib.dll: rectpointlib.obj
+	link /dll rectpointlib.obj $(LUA_LIB) $(OLE_LIB) /def:rectpointlib.def
+
+all: comgen.dll rectpointlib.dll
+
+clean:
+	del *.dll *.obj *.lib *.exp rectpointlib.*

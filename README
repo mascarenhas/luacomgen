@@ -1,0 +1,16 @@
+
+This is the beginning of a generator of Lua->COM bindings for regular COM interfaces (not IDispatch).
+
+To run the tests, first edit Makefile.win and rectpoint/Makefile.win to reflect the paths for your
+Windows Platform SDK and Lua installation. After that, run "nmake /f Makefile.win all" inside the
+rectpoint directory, then run "nmake /f Makefile.win all" in the main directory.
+
+Now open an administrator console, register rectpoint\rectpoint.dll with regsvr32 and run
+"test_comgen.lua". If everything is ok there should be no output.
+
+The Makefile assumes you have LuaRocks installed, along with the latest version of Cosmo (install
+with "luarocks install cosmo current --from=http://luarocks.org/repositories/rocks-cvs".
+
+Right now the only data type that the generator supports is "long", but I am going to add the whole
+menagerie of COM primitive types, plus VARIANT, along with support for reading type libraries directly.
+
