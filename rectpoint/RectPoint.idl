@@ -12,6 +12,11 @@ typedef enum {
   DOTTED
 } RECTTYPE;
 
+typedef struct {
+  int x;
+  int y;
+} SPoint;
+
 	[
 		object,
 		uuid(CCA7F35D-DAF3-11D0-8C53-0080C73925BA),
@@ -34,6 +39,9 @@ typedef enum {
 	interface IRect : IUnknown
 	{
 		[helpstring("method SetCoords")] HRESULT SetCoords([in] long left, [in] long top, [in] long right, [in] long bottom);
+	        [helpstring("method SetCoords")] HRESULT SetCoords2([in] SPoint topLeft, [in] SPoint botRight);
+	        [helpstring("method SetCoords")] HRESULT SetCoords3([in] SPoint *topLeft, [in] SPoint *botRight);
+	        [helpstring("property Volume")] HRESULT GetCoords([out] SPoint *topLeft, [out] SPoint *botRight);
 		[propget, helpstring("property Volume")] HRESULT Volume([out, retval] long *pVal);
 	        HRESULT DrawRect([in] RECTTYPE type, [out, retval] long *res);
 	};

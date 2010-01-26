@@ -27,7 +27,24 @@ local template_push_enum = cosmo.compile[[
   lua_remove(L, -2);
 ]]
 
-local comtypes = {
+local template_init_struct = cosmo.compile[=[
+  $fields[[
+    lua_getfield(L, $stkidx, "$name");
+    $init{ var.."."..name, -1, type }
+    lua_pop(L, 1);
+  ]]
+]=]
+
+local template_push_struct = cosmo.compile[=[
+  lua_newtable(L);
+  $fields[[
+    $push{ var.."."..name, type }
+    lua_setfield(L, -2, "$name");
+  ]]
+]=]
+
+local comtypes 
+comtypes = {
   long = {
     ctype = function (type)
 	      return type.name
@@ -49,6 +66,27 @@ local comtypes = {
     push = function (args)
 	     return template_push_enum{ type = args[2], var = args[1] }
 	   end,
+  },
+  struct = {
+    ctype = function (type)
+	      return type.typedef
+	    end,
+    init = function (args)
+	     local type = args[3]
+	     local fields = {}
+	     for _, field in ipairs(type.fields) do
+	       fields[#fields+1] = { type = field.type, init = comtypes[field.type.name].init, name = field.name }
+	     end
+	     return template_init_struct{ fields = fields, stkidx = args[2], var = args[1] }
+	   end,
+    push = function (args)
+	     local type = args[2]
+	     local fields = {}
+	     for _, field in ipairs(type.fields) do
+	       fields[#fields+1] = { type = field.type, push = comtypes[field.type.name].push, name = field.name }
+	     end
+	     return template_push_struct{ fields = fields, var = args[1] }
+	   end
   }
 }
 
@@ -56,7 +94,10 @@ _M.types = {
   long = { name = "long" },
   enum = function (typedef)
 	   return { name = "enum", typedef = typedef }
-	 end
+	 end,
+  struct = function (typedef, fields)
+	     return { name = "struct", typedef = typedef, fields = fields }
+	   end
 }
 
 function _M.readfile(filename, s)
@@ -113,6 +154,9 @@ function _M.compile_method(method)
     end
     if attr["in"] then
       pdata.init = comtypes[typename].init
+    end
+    if attr.ref and not attr.out and not attr.retval then
+      pdata.pass = "&" .. param.name
     end
     table.insert(mdata.parameters, pdata)
   end

@@ -3,6 +3,11 @@ local generator = require "comgen.generator"
 
 local types = generator.types
 
+local SPoint = types.struct("SPoint", {
+  { type = types.long, name = "x" },
+  { type = types.long, name = "y" }
+})
+
 local IPoint = {
   name = "IPoint",
   iid = "{CCA7F35D-DAF3-11D0-8C53-0080C73925BA}",
@@ -37,6 +42,27 @@ local IRect = {
 	{ type = types.long, attributes = { ["in"] = true }, name = "top" },
 	{ type = types.long, attributes = { ["in"] = true }, name = "right" },
 	{ type = types.long, attributes = { ["in"] = true }, name = "bottom" }
+      }
+    },
+    { 
+      name = "SetCoords2", 
+      parameters = {
+	{ type = SPoint, attributes = { ["in"] = true }, name = "topLeft" },
+	{ type = SPoint, attributes = { ["in"] = true }, name = "botRight" }
+      }
+    },
+    { 
+      name = "SetCoords3", 
+      parameters = {
+	{ type = SPoint, attributes = { ["in"] = true, ref = true }, name = "topLeft" },
+	{ type = SPoint, attributes = { ["in"] = true, ref = true }, name = "botRight" }
+      }
+    },
+    { 
+      name = "GetCoords", 
+      parameters = {
+	{ type = SPoint, attributes = { out = true }, name = "topLeft" },
+	{ type = SPoint, attributes = { out = true }, name = "botRight" }
       }
     },
     {

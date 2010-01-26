@@ -1,8 +1,8 @@
 
 OLE_LIB="c:\Program Files\Microsoft Platform SDK for Windows Server 2003 R2\lib\ole32.lib"
-LUA="c:\LuaRocks\1.0\lua5.1.exe"
-LUA_INCLUDE_DIR="c:\LuaRocks\1.0\Include"
-LUA_LIB="c:\LuaRocks\1.0\lua51.lib"
+LUA="c:\Lua51\lua.exe"
+LUA_INCLUDE_DIR="c:\Lua51\Include"
+LUA_LIB="c:\Lua51\lib\lua51.lib"
 
 comgen.obj: comgen.cpp
 	cl /c /I$(LUA_INCLUDE_DIR) comgen.cpp
