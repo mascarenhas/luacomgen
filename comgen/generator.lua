@@ -9,7 +9,7 @@ EXPORTS
     luaopen_$modname
 ]]
 
-local template_init_enum = cosmo.compile[[
+local template_set_enum = cosmo.compile[[
   lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_enums");
   lua_getfield(L, -1, "$(type.typedef)");
   lua_pushvalue(L, $stkidx);
@@ -29,17 +29,31 @@ local template_push_enum = cosmo.compile[[
 
 local template_init_struct = cosmo.compile[=[
   $fields[[
-    lua_getfield(L, $stkidx, "$name");
-    $init{ var.."."..name, -1, type }
-    lua_pop(L, 1);
+    $if{init}[[$init{ var.."."..name, type }]]
+  ]]
+]=]
+
+local template_set_struct = cosmo.compile[=[
+  $fields[[
+    $if{set}[[
+      lua_getfield(L, $stkidx, "$name");
+      $set{ var.."."..name, -1, type }
+      lua_pop(L, 1);
+    ]]
   ]]
 ]=]
 
 local template_push_struct = cosmo.compile[=[
   lua_newtable(L);
   $fields[[
-    $push{ var.."."..name, type }
-    lua_setfield(L, -2, "$name");
+    $if{push}[[$push{ var.."."..name, type }
+	  lua_setfield(L, -2, "$name");]]
+  ]]
+]=]
+
+local template_clear_struct = cosmo.compile[=[
+  $fields[[
+    $if{clear}[[$clear{ var.."."..name, type }]]
   ]]
 ]=]
 
@@ -49,20 +63,20 @@ comtypes = {
     ctype = function (type)
 	      return type.name
 	    end,
-    init = function (args)
-	     return args[1] .. " = luaL_checkinteger(L, " .. args[2] .. ");" 
-	   end,
+    set = function (args)
+	    return args[1] .. " = luaL_checkinteger(L, " .. args[2] .. ");" 
+	  end,
     push = function (args)
 	     return "lua_pushinteger(L, " .. args[1] .. ");"
-	   end
+	   end,
   },
   enum = {
     ctype = function (type)
 	      return type.typedef
 	    end,
-    init = function (args)
-	     return template_init_enum{ type = args[3], stkidx = args[2], var = args[1] }
-	   end,
+    set = function (args)
+	    return template_set_enum{ type = args[3], stkidx = args[2], var = args[1] }
+	  end,
     push = function (args)
 	     return template_push_enum{ type = args[2], var = args[1] }
 	   end,
@@ -72,31 +86,72 @@ comtypes = {
 	      return type.typedef
 	    end,
     init = function (args)
-	     local type = args[3]
+	     local type = args[2]
 	     local fields = {}
 	     for _, field in ipairs(type.fields) do
 	       fields[#fields+1] = { type = field.type, init = comtypes[field.type.name].init, name = field.name }
 	     end
-	     return template_init_struct{ fields = fields, stkidx = args[2], var = args[1] }
+	     return template_init_struct{ fields = fields, var = args[1], ["if"] = cosmo.cif }
 	   end,
+    set = function (args)
+	    local type = args[3]
+	    local fields = {}
+	    for _, field in ipairs(type.fields) do
+	      fields[#fields+1] = { type = field.type, set = comtypes[field.type.name].set, name = field.name }
+	    end
+	    return template_set_struct{ fields = fields, stkidx = args[2], var = args[1], ["if"] = cosmo.cif }
+	  end,
     push = function (args)
 	     local type = args[2]
 	     local fields = {}
 	     for _, field in ipairs(type.fields) do
 	       fields[#fields+1] = { type = field.type, push = comtypes[field.type.name].push, name = field.name }
 	     end
-	     return template_push_struct{ fields = fields, var = args[1] }
-	   end
+	     return template_push_struct{ fields = fields, var = args[1], ["if"] = cosmo.cif }
+	   end,
+    clear = function (args)
+	      local type = args[2]
+	      local fields = {}
+	      for _, field in ipairs(type.fields) do
+		fields[#fields+1] = { type = field.type, clear = comtypes[field.type.name].clear, name = field.name }
+	      end
+	      return template_clear_struct{ fields = fields, var = args[1], ["if"] = cosmo.cif }
+	    end
+  },
+  variant = {
+    ctype = function (type)
+	      return "VARIANT"
+	    end,
+    init = function (args)
+	     return "VariantInit(&" .. args[1] .. ");"
+	   end,
+    set = function (args)
+	    return "comgen_set_variant(L, " .. args[2] .. ", &" .. args[1] .. ");"
+	  end,
+    push = function (args)
+	     return "comgen_push_variant(L, &" .. args[1] .. ");"
+	   end,
+    clear = function (args)
+	      return "VariantClear(&" .. args[1] .. ");"
+	    end,
   }
 }
 
 _M.types = {
   long = { name = "long" },
+  variant = { name = "variant" },
   enum = function (typedef)
 	   return { name = "enum", typedef = typedef }
 	 end,
   struct = function (typedef, fields)
-	     return { name = "struct", typedef = typedef, fields = fields }
+	     local t = { name = "struct", typedef = typedef }
+	     for _, field in ipairs(fields) do
+	       if field.type == "self" then
+		 field.type = t
+	       end
+	     end
+	     t.fields = fields
+	     return t
 	   end
 }
 
@@ -140,7 +195,9 @@ function _M.compile_method(method)
   for i, param in ipairs(method.parameters) do
     local typename = param.type.name
     local pdata = { name = param.name, pass = param.name, type = param.type,
-		    ctype = comtypes[typename].ctype(param.type), pos = i + 1 }
+		    ctype = comtypes[typename].ctype(param.type),
+		    init = comtypes[typename].init,
+		    clear = comtypes[typename].clear, pos = i + 1 }
     local attr = param.attributes or {}
     if attr.out and not attr.retval then
       mdata.nresults = mdata.nresults + 1
@@ -153,7 +210,7 @@ function _M.compile_method(method)
       mdata.pushret = comtypes[typename].push{ param.name, param.type }
     end
     if attr["in"] then
-      pdata.init = comtypes[typename].init
+      pdata.set = comtypes[typename].set
     end
     if attr.ref and not attr.out and not attr.retval then
       pdata.pass = "&" .. param.name

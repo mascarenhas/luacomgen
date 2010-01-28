@@ -27,7 +27,10 @@ END_COM_MAP()
 // IPoint
 public:
 	STDMETHOD(SetCoords)(/*[in]*/ long x, /*[in]*/ long y);
+	STDMETHOD(SetCoords2)(/*[in]*/ VARIANT x, /*[in]*/ VARIANT y);
 	STDMETHOD(GetCoords)(/*[out]*/ long *px, /*[out]*/ long *py);
+	STDMETHOD(GetCoords2)(/*[out]*/ VARIANT *px, /*[out]*/ VARIANT *py);
+	STDMETHOD(SetGetCoords)(/*[out]*/ VARIANT *px, /*[out]*/ VARIANT *py);
 private:
 	long m_x;
 	long m_y;

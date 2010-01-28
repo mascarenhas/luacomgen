@@ -20,3 +20,46 @@ STDMETHODIMP CPoint::SetCoords(long x, long y)
     m_y = y;
 	return S_OK;
 }
+
+STDMETHODIMP CPoint::SetCoords2(/*[in]*/ VARIANT x, /*[in]*/ VARIANT y) {
+  VARIANT vx, vy;
+  VariantInit(&vx);
+  VariantInit(&vy);
+  VariantChangeType(&vx, &x, 0, VT_I4); 
+  VariantChangeType(&vy, &y, 0, VT_I4);
+  m_x = vx.lVal;
+  m_y = vy.lVal;
+  VariantClear(&vx);
+  VariantClear(&vy);
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::GetCoords2(/*[out]*/ VARIANT *px, /*[out]*/ VARIANT *py) {
+  px->vt = VT_I4;
+  px->lVal = m_x;
+  py->vt = VT_I4;
+  py->lVal = m_y;
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::SetGetCoords(/*[out]*/ VARIANT *px, /*[out]*/ VARIANT *py) {
+  long x, y;
+  VARIANT vx, vy;
+  VariantInit(&vx);
+  VariantInit(&vy);
+  VariantChangeType(&vx, px, 0, VT_I4); 
+  VariantChangeType(&vy, py, 0, VT_I4);
+  x = m_x;
+  y = m_y;
+  m_x = vx.lVal;
+  m_y = vy.lVal;
+  vx.vt = VT_I4;
+  vx.lVal = x;
+  vy.vt = VT_I4;
+  vy.lVal = y;
+  VariantChangeType(px, &vx, 0, px->vt);
+  VariantChangeType(py, &vy, 0, py->vt);
+  VariantClear(&vx);
+  VariantClear(&vy);
+  return S_OK;
+}

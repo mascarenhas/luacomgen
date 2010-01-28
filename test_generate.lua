@@ -20,13 +20,34 @@ local IPoint = {
 	{ type = types.long, attributes = { ["in"] = true }, name = "y" },
       }
     },
+    { 
+      name = "SetCoords2", 
+      parameters = {
+	{ type = types.variant, attributes = { ["in"] = true }, name = "x" },
+	{ type = types.variant, attributes = { ["in"] = true }, name = "y" },
+      }
+    },
     {
       name = "GetCoords",
       parameters = {
 	{ type = types.long, attributes = { out = true }, name = "px" },
 	{ type = types.long, attributes = { out = true }, name = "py" }
       }
-    }
+    },
+    {
+      name = "GetCoords2",
+      parameters = {
+	{ type = types.variant, attributes = { out = true }, name = "px" },
+	{ type = types.variant, attributes = { out = true }, name = "py" }
+      }
+    },
+    {
+      name = "SetGetCoords",
+      parameters = {
+	{ type = types.variant, attributes = { ["in"] = true, out = true }, name = "px" },
+	{ type = types.variant, attributes = { ["in"] = true, out = true }, name = "py" }
+      }
+    },
   }
 }
 

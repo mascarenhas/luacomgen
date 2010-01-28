@@ -1,5 +1,6 @@
 
 OLE_LIB="c:\Program Files\Microsoft Platform SDK for Windows Server 2003 R2\lib\ole32.lib"
+OLEAUT_LIB="c:\Program Files\Microsoft Platform SDK for Windows Server 2003 R2\lib\oleaut32.lib"
 LUA="c:\Lua51\lua.exe"
 LUA_INCLUDE_DIR="c:\Lua51\Include"
 LUA_LIB="c:\Lua51\lib\lua51.lib"
@@ -17,7 +18,7 @@ rectpointlib.obj: rectpointlib.cpp
 	cl /c /I$(LUA_INCLUDE_DIR) /Irectpoint rectpointlib.cpp
 
 rectpointlib.dll: rectpointlib.obj
-	link /dll rectpointlib.obj $(LUA_LIB) $(OLE_LIB) /def:rectpointlib.def
+	link /dll rectpointlib.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:rectpointlib.def
 
 all: comgen.dll rectpointlib.dll
 

@@ -84,6 +84,172 @@ $fields[[  { "$name", $value },
 
 ]]
 
+#define ISREF(T) (isref ? *(var->p##T) : var->T)
+
+#define ISREF_S(T,V) if(isref) { *(var->p##T)=V; } else { var->T=V; }
+
+#define VT(T) { VT_##T, #T }
+
+typedef struct {
+  VARTYPE vt;
+  const char *name;
+} COMGEN_VARTYPE;
+
+static COMGEN_VARTYPE comgen_vartypes[] = { 
+  VT(EMPTY),
+  VT(NULL),
+  VT(UI1),
+  VT(UI2),
+  VT(UI4),
+  VT(UI8),
+  VT(UINT),
+  VT(I1),
+  VT(I2),
+  VT(I4),
+  VT(I8),
+  VT(INT),
+  VT(R4),
+  VT(R8),
+  VT(DATE),
+  VT(BSTR),
+  VT(ERROR),
+  VT(BOOL),
+  VT(VARIANT),
+  { 0, NULL }
+};
+
+static VARTYPE comgen_name2vt(lua_State *L, const char *name) {
+  COMGEN_VARTYPE *vts = comgen_vartypes;
+  for(; vts->name != NULL; vts++) {
+    if(strcmp(vts->name, name) == 0)
+      return vts->vt;
+  }
+  luaL_error(L, "invalid VARTYPE %s", name);
+  return 0;
+}
+
+static void comgen_checktype(lua_State *L, int origidx, int validx, int t) {
+  int rt = lua_type(L, validx);
+  if(rt != t)
+    luaL_error(L, "argument %i needs to be a %s but is a %s", 
+	       origidx, lua_typename(L, t), lua_typename(L, rt));
+}
+
+static void comgen_set_variant(lua_State *L, int stkidx, VARIANT *var);
+
+static void comgen_converttable(lua_State *L, int stkidx, VARIANT *var) {
+  lua_getfield(L, stkidx, "type");
+  VARTYPE vt = comgen_name2vt(L, lua_tostring(L, -1));
+  lua_getfield(L, stkidx, "value");
+  int isref = 0;
+  switch(vt) {
+    case VT_EMPTY: break;
+    case VT_NULL: break;
+    case VT_UI1: ISREF_S(bVal, lua_tointeger(L, -1)); break;
+    case VT_UI2: ISREF_S(uiVal, lua_tointeger(L, -1)); break;
+    case VT_UI4: ISREF_S(ulVal, lua_tointeger(L, -1)); break;
+    case VT_UI8: ISREF_S(ullVal, lua_tointeger(L, -1)); break;
+    case VT_UINT: ISREF_S(uintVal, lua_tointeger(L, -1)); break;
+    case VT_I1: ISREF_S(cVal, lua_tointeger(L, -1)); break;
+    case VT_I2: ISREF_S(iVal, lua_tointeger(L, -1)); break;
+    case VT_I4: ISREF_S(lVal, lua_tointeger(L, -1)); break;
+    case VT_I8: ISREF_S(llVal, lua_tointeger(L, -1)); break;
+    case VT_INT: ISREF_S(intVal, lua_tointeger(L, -1)); break;
+    case VT_R4: ISREF_S(fltVal, lua_tonumber(L, -1)); break;
+    case VT_R8: ISREF_S(dblVal, lua_tonumber(L, -1)); break;
+    case VT_CY: luaL_error(L, "VARIANT type CY not supported"); break;
+    case VT_DATE: ISREF_S(date, lua_tonumber(L, -1)); break;
+    case VT_BSTR: {
+      break;
+    }
+    case VT_DISPATCH: luaL_error(L, "VARIANT type DISPATCH not supported"); break;
+    case VT_ERROR: {
+      ISREF_S(scode, lua_tointeger(L, -1));
+      break;
+    }
+    case VT_BOOL: {
+      ISREF_S(boolVal, lua_toboolean(L, -1) ? -1 : 0);
+      break;
+    }
+    case VT_VARIANT: comgen_set_variant(L, lua_gettop(L), var->pvarVal); break;
+    case VT_UNKNOWN: luaL_error(L, "VARIANT type UNKNOWN not supported"); break;
+    case VT_DECIMAL: luaL_error(L, "VARIANT type DECIMAL not supported"); break;
+    default: luaL_error(L, "unsupported VARIANT type %i", vt);
+  }
+  lua_pop(L, 2);
+  var->vt = vt;
+}
+
+static void comgen_set_variant(lua_State *L, int stkidx, VARIANT *var) {
+  int t = lua_type(L, stkidx);
+  switch(t) {
+    case LUA_TNUMBER:
+      var->vt = VT_R8;
+      var->dblVal = lua_tonumber(L, stkidx);
+      break;
+    case LUA_TSTRING:
+      luaL_error(L, "passing strings to variants is not supported yet");
+      break;
+    case LUA_TNIL:
+      var->vt = VT_EMPTY;
+      break;
+    case LUA_TBOOLEAN:
+      var->vt = VT_BOOL;
+      var->boolVal = lua_toboolean(L, stkidx) ? -1 : 0;
+      break;
+    case LUA_TTABLE:
+      comgen_converttable(L, stkidx, var);
+      break;
+    default:
+      luaL_error(L, "%s is not a valid type for COM variants", lua_typename(L, t));
+  }
+}
+
+static void comgen_push_variant(lua_State *L, VARIANT *var) {
+  VARTYPE vt = var->vt;
+  VARTYPE isref = var->vt & VT_BYREF;
+  vt = var->vt & ~VT_BYREF;
+  switch(vt) {
+    case VT_EMPTY: lua_pushnil(L); break;
+    case VT_NULL: lua_pushnil(L); break;
+    case VT_UI1: lua_pushinteger(L, ISREF(bVal)); break;
+    case VT_UI2: lua_pushinteger(L, ISREF(uiVal)); break;
+    case VT_UI4: lua_pushinteger(L, ISREF(ulVal)); break;
+    case VT_UI8: lua_pushinteger(L, (long)ISREF(ullVal)); break;
+    case VT_UINT: lua_pushinteger(L, ISREF(uintVal)); break;
+    case VT_I1: lua_pushinteger(L, ISREF(cVal)); break;
+    case VT_I2: lua_pushinteger(L, ISREF(iVal)); break;
+    case VT_I4: lua_pushinteger(L, ISREF(lVal)); break;
+    case VT_I8: lua_pushinteger(L, (long)ISREF(llVal)); break;
+    case VT_INT: lua_pushinteger(L, ISREF(intVal)); break;
+    case VT_R4: lua_pushnumber(L, ISREF(fltVal)); break;
+    case VT_R8: lua_pushnumber(L, ISREF(dblVal)); break;
+    case VT_CY: luaL_error(L, "VARIANT type CY not supported"); break;
+    case VT_DATE: lua_pushnumber(L, ISREF(date)); break;
+    case VT_BSTR: {
+      BSTR b = ISREF(bstrVal);
+      break;
+    }
+    case VT_DISPATCH: luaL_error(L, "VARIANT type DISPATCH not supported"); break;
+    case VT_ERROR: {
+      char sz[1024];
+      if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ISREF(scode), 0, sz, 1024, 0))
+	lua_pushstring(L, sz);
+      else
+	lua_pushstring(L, "Unknown error");
+      break;
+    }
+    case VT_BOOL: {
+      ISREF(boolVal) == -1 ? lua_pushboolean(L, 1) : lua_pushboolean(L, 0);
+      break;
+    }
+    case VT_VARIANT: comgen_push_variant(L, var->pvarVal); break;
+    case VT_UNKNOWN: luaL_error(L, "VARIANT type UNKNOWN not supported"); break;
+    case VT_DECIMAL: luaL_error(L, "VARIANT type DECIMAL not supported"); break;
+    default: luaL_error(L, "unsupported VARIANT type %i", vt);
+  }
+}
+
 $interfaces[[
 
 #ifndef IID_$(parent)_String
@@ -98,14 +264,17 @@ static int $(modname)_$(methodname)(lua_State *L) {
   void *ud = lua_touserdata(L, 1);
   $ifname *p = *(($ifname **)ud);
 $parameters[[  $ctype $name;
-$if{init}[[  $init{name, pos, type}
+$if{init}[[  $init{name, type}
+]]
+$if{set}[[  $set{name, pos, type}
 ]]]]
   HRESULT hr = p->$cname($concat{parameters}[[$pass]]);
   if(SUCCEEDED(hr)) {
     $pushret
 $parameters[[$if{push}[[    $push{name,type}
-]]]]
-    return $nresults;
+]]
+$if{clear}[[    $clear{name,type}
+]]]]    return $nresults;
   } else {
     return comgen_error(L, hr);
   }
