@@ -34,7 +34,7 @@ static int comgen_error(lua_State *L, HRESULT hr) {
   return 0;
 }
 
-static void *comgen_checkinterface(lua_State *L, int stkidx, const char *siid) {
+static int comgen_isinterface(lua_State *L, int stkidx, const char *siid) {
   lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
   lua_getmetatable(L, stkidx);
   if(!lua_isnil(L, -1)) {
@@ -44,15 +44,21 @@ static void *comgen_checkinterface(lua_State *L, int stkidx, const char *siid) {
 	lua_pushstring(L, siid);
 	if(lua_rawequal(L, -1, -2)) {
 	  lua_pop(L, 3);
-	  void **ud = (void **)lua_touserdata(L, stkidx);
-	  return *ud;
+	  return 1;
 	}
       } else {
 	lua_pop(L, 2);
-	void **ud = (void **)lua_touserdata(L, stkidx);
-	return *ud;
+	return 1;
       }
     }
+  }
+  return 0;
+}
+
+static void *comgen_checkinterface(lua_State *L, int stkidx, const char *siid) {
+  if(comgen_isinterface(L, stkidx, siid)) {
+    void **ud = (void **)lua_touserdata(L, stkidx);
+    return *ud;
   }
   if(siid)
     luaL_error(L, "expected COM interface %s, got %s", siid, lua_typename(L, lua_type(L, stkidx)));
@@ -231,124 +237,6 @@ static void comgen_checktype(lua_State *L, int origidx, int validx, int t) {
 	       origidx, lua_typename(L, t), lua_typename(L, rt));
 }
 
-static void comgen_set_variant(lua_State *L, int stkidx, VARIANT *var);
-
-static void comgen_converttable(lua_State *L, int stkidx, VARIANT *var) {
-  lua_getfield(L, stkidx, "type");
-  VARTYPE vt = comgen_name2vt(L, lua_tostring(L, -1));
-  lua_getfield(L, stkidx, "value");
-  int isref = 0;
-  switch(vt) {
-    case VT_EMPTY: break;
-    case VT_NULL: break;
-    case VT_UI1: ISREF_S(bVal, lua_tointeger(L, -1)); break;
-    case VT_UI2: ISREF_S(uiVal, lua_tointeger(L, -1)); break;
-    case VT_UI4: ISREF_S(ulVal, lua_tointeger(L, -1)); break;
-    case VT_UI8: ISREF_S(ullVal, lua_tointeger(L, -1)); break;
-    case VT_UINT: ISREF_S(uintVal, lua_tointeger(L, -1)); break;
-    case VT_I1: ISREF_S(cVal, lua_tointeger(L, -1)); break;
-    case VT_I2: ISREF_S(iVal, lua_tointeger(L, -1)); break;
-    case VT_I4: ISREF_S(lVal, lua_tointeger(L, -1)); break;
-    case VT_I8: ISREF_S(llVal, lua_tointeger(L, -1)); break;
-    case VT_INT: ISREF_S(intVal, lua_tointeger(L, -1)); break;
-    case VT_R4: ISREF_S(fltVal, lua_tonumber(L, -1)); break;
-    case VT_R8: ISREF_S(dblVal, lua_tonumber(L, -1)); break;
-    case VT_CY: luaL_error(L, "VARIANT type CY not supported"); break;
-    case VT_DATE: ISREF_S(date, lua_tonumber(L, -1)); break;
-    case VT_BSTR: {
-      ISREF_S(bstrVal, comgen_tobstr(L, -1));
-      break;
-    }
-    case VT_DISPATCH: luaL_error(L, "VARIANT type DISPATCH not supported"); break;
-    case VT_ERROR: {
-      ISREF_S(scode, lua_tointeger(L, -1));
-      break;
-    }
-    case VT_BOOL: {
-      ISREF_S(boolVal, lua_toboolean(L, -1) ? -1 : 0);
-      break;
-    }
-    case VT_VARIANT: comgen_set_variant(L, lua_gettop(L), var->pvarVal); break;
-    case VT_UNKNOWN: luaL_error(L, "VARIANT type UNKNOWN not supported"); break;
-    case VT_DECIMAL: luaL_error(L, "VARIANT type DECIMAL not supported"); break;
-    default: luaL_error(L, "unsupported VARIANT type %i", vt);
-  }
-  lua_pop(L, 2);
-  var->vt = vt;
-}
-
-static void comgen_set_variant(lua_State *L, int stkidx, VARIANT *var) {
-  int t = lua_type(L, stkidx);
-  switch(t) {
-    case LUA_TNUMBER:
-      var->vt = VT_R8;
-      var->dblVal = lua_tonumber(L, stkidx);
-      break;
-    case LUA_TSTRING: {
-      var->vt = VT_BSTR;
-      var->bstrVal = comgen_tobstr(L, stkidx);
-      break;
-    }
-    case LUA_TNIL:
-      var->vt = VT_EMPTY;
-      break;
-    case LUA_TBOOLEAN:
-      var->vt = VT_BOOL;
-      var->boolVal = lua_toboolean(L, stkidx) ? -1 : 0;
-      break;
-    case LUA_TTABLE:
-      comgen_converttable(L, stkidx, var);
-      break;
-    default:
-      luaL_error(L, "%s is not a valid type for COM variants", lua_typename(L, t));
-  }
-}
-
-static void comgen_push_variant(lua_State *L, VARIANT *var) {
-  VARTYPE vt = var->vt;
-  VARTYPE isref = var->vt & VT_BYREF;
-  vt = var->vt & ~VT_BYREF;
-  switch(vt) {
-    case VT_EMPTY: lua_pushnil(L); break;
-    case VT_NULL: lua_pushnil(L); break;
-    case VT_UI1: lua_pushinteger(L, ISREF(bVal)); break;
-    case VT_UI2: lua_pushinteger(L, ISREF(uiVal)); break;
-    case VT_UI4: lua_pushinteger(L, ISREF(ulVal)); break;
-    case VT_UI8: lua_pushinteger(L, (long)ISREF(ullVal)); break;
-    case VT_UINT: lua_pushinteger(L, ISREF(uintVal)); break;
-    case VT_I1: lua_pushinteger(L, ISREF(cVal)); break;
-    case VT_I2: lua_pushinteger(L, ISREF(iVal)); break;
-    case VT_I4: lua_pushinteger(L, ISREF(lVal)); break;
-    case VT_I8: lua_pushinteger(L, (long)ISREF(llVal)); break;
-    case VT_INT: lua_pushinteger(L, ISREF(intVal)); break;
-    case VT_R4: lua_pushnumber(L, ISREF(fltVal)); break;
-    case VT_R8: lua_pushnumber(L, ISREF(dblVal)); break;
-    case VT_CY: luaL_error(L, "VARIANT type CY not supported"); break;
-    case VT_DATE: lua_pushnumber(L, ISREF(date)); break;
-    case VT_BSTR: {
-      comgen_pushbstr(L, ISREF(bstrVal));
-      break;
-    }
-    case VT_DISPATCH: luaL_error(L, "VARIANT type DISPATCH not supported"); break;
-    case VT_ERROR: {
-      char sz[1024];
-      if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ISREF(scode), 0, sz, 1024, 0))
-	lua_pushstring(L, sz);
-      else
-	lua_pushstring(L, "Unknown error");
-      break;
-    }
-    case VT_BOOL: {
-      ISREF(boolVal) == -1 ? lua_pushboolean(L, 1) : lua_pushboolean(L, 0);
-      break;
-    }
-    case VT_VARIANT: comgen_push_variant(L, var->pvarVal); break;
-    case VT_UNKNOWN: luaL_error(L, "VARIANT type UNKNOWN not supported"); break;
-    case VT_DECIMAL: luaL_error(L, "VARIANT type DECIMAL not supported"); break;
-    default: luaL_error(L, "unsupported VARIANT type %i", vt);
-  }
-}
-
 static void *comgen_tointerface(lua_State *L, int stkidx, const char *siid) {
   wchar_t wsiid[GUID_SIZE];
   mbstowcs(wsiid, siid, GUID_SIZE);
@@ -382,6 +270,140 @@ static void comgen_pushinterface(lua_State *L, void *ppv, const char *siid) {
   lua_pop(L, 1);
   *ud = ppv;
 }
+
+static void comgen_set_variant(lua_State *L, int stkidx, VARIANT *var);
+
+static void comgen_converttable(lua_State *L, int stkidx, VARIANT *var) {
+  lua_getfield(L, stkidx, "type");
+  VARTYPE vt = comgen_name2vt(L, lua_tostring(L, -1));
+  lua_getfield(L, stkidx, "value");
+  int isref = 0;
+  switch(vt) {
+    case VT_EMPTY: break;
+    case VT_NULL: break;
+    case VT_UI1: ISREF_S(bVal, lua_tointeger(L, -1)); break;
+    case VT_UI2: ISREF_S(uiVal, lua_tointeger(L, -1)); break;
+    case VT_UI4: ISREF_S(ulVal, lua_tointeger(L, -1)); break;
+    case VT_UI8: ISREF_S(ullVal, lua_tointeger(L, -1)); break;
+    case VT_UINT: ISREF_S(uintVal, lua_tointeger(L, -1)); break;
+    case VT_I1: ISREF_S(cVal, lua_tointeger(L, -1)); break;
+    case VT_I2: ISREF_S(iVal, lua_tointeger(L, -1)); break;
+    case VT_I4: ISREF_S(lVal, lua_tointeger(L, -1)); break;
+    case VT_I8: ISREF_S(llVal, lua_tointeger(L, -1)); break;
+    case VT_INT: ISREF_S(intVal, lua_tointeger(L, -1)); break;
+    case VT_R4: ISREF_S(fltVal, lua_tonumber(L, -1)); break;
+    case VT_R8: ISREF_S(dblVal, lua_tonumber(L, -1)); break;
+    case VT_CY: luaL_error(L, "VARIANT type CY not supported"); break;
+    case VT_DATE: ISREF_S(date, lua_tonumber(L, -1)); break;
+    case VT_BSTR: {
+      ISREF_S(bstrVal, comgen_tobstr(L, -1));
+      break;
+    }
+    case VT_DISPATCH:
+      ISREF_S(pdispVal, (IDispatch *)comgen_tointerface(L, -1, IID_IDispatch_String));
+      break;
+    case VT_ERROR: {
+      ISREF_S(scode, lua_tointeger(L, -1));
+      break;
+    }
+    case VT_BOOL: {
+      ISREF_S(boolVal, lua_toboolean(L, -1) ? -1 : 0);
+      break;
+    }
+    case VT_VARIANT: comgen_set_variant(L, lua_gettop(L), var->pvarVal); break;
+    case VT_UNKNOWN:
+      ISREF_S(punkVal, (IUnknown *)comgen_tointerface(L, -1, IID_IUnknown_String));
+      break;
+    case VT_DECIMAL: luaL_error(L, "VARIANT type DECIMAL not supported"); break;
+    default: luaL_error(L, "unsupported VARIANT type %i", vt);
+  }
+  lua_pop(L, 2);
+  var->vt = vt;
+}
+
+static void comgen_set_variant(lua_State *L, int stkidx, VARIANT *var) {
+  int t = lua_type(L, stkidx);
+  switch(t) {
+    case LUA_TNUMBER:
+      var->vt = VT_R8;
+      var->dblVal = lua_tonumber(L, stkidx);
+      break;
+    case LUA_TSTRING: {
+      var->vt = VT_BSTR;
+      var->bstrVal = comgen_tobstr(L, stkidx);
+      break;
+    }
+    case LUA_TNIL:
+      var->vt = VT_EMPTY;
+      break;
+    case LUA_TBOOLEAN:
+      var->vt = VT_BOOL;
+      var->boolVal = lua_toboolean(L, stkidx) ? -1 : 0;
+      break;
+    case LUA_TTABLE:
+      comgen_converttable(L, stkidx, var);
+      break;
+    case LUA_TUSERDATA: {
+      if(comgen_isinterface(L, stkidx, 0)) {
+	var->vt = VT_UNKNOWN;
+	var->punkVal = (IUnknown *)comgen_tointerface(L, stkidx, 0);
+	break;
+      }
+    }
+    default:
+      luaL_error(L, "%s is not a valid type for COM variants", lua_typename(L, t));
+  }
+}
+
+static void comgen_push_variant(lua_State *L, VARIANT *var) {
+  VARTYPE vt = var->vt;
+  VARTYPE isref = var->vt & VT_BYREF;
+  vt = var->vt & ~VT_BYREF;
+  switch(vt) {
+    case VT_EMPTY: lua_pushnil(L); break;
+    case VT_NULL: lua_pushnil(L); break;
+    case VT_UI1: lua_pushinteger(L, ISREF(bVal)); break;
+    case VT_UI2: lua_pushinteger(L, ISREF(uiVal)); break;
+    case VT_UI4: lua_pushinteger(L, ISREF(ulVal)); break;
+    case VT_UI8: lua_pushinteger(L, (long)ISREF(ullVal)); break;
+    case VT_UINT: lua_pushinteger(L, ISREF(uintVal)); break;
+    case VT_I1: lua_pushinteger(L, ISREF(cVal)); break;
+    case VT_I2: lua_pushinteger(L, ISREF(iVal)); break;
+    case VT_I4: lua_pushinteger(L, ISREF(lVal)); break;
+    case VT_I8: lua_pushinteger(L, (long)ISREF(llVal)); break;
+    case VT_INT: lua_pushinteger(L, ISREF(intVal)); break;
+    case VT_R4: lua_pushnumber(L, ISREF(fltVal)); break;
+    case VT_R8: lua_pushnumber(L, ISREF(dblVal)); break;
+    case VT_CY: luaL_error(L, "VARIANT type CY not supported"); break;
+    case VT_DATE: lua_pushnumber(L, ISREF(date)); break;
+    case VT_BSTR: {
+      comgen_pushbstr(L, ISREF(bstrVal));
+      break;
+    }
+    case VT_DISPATCH: 
+      comgen_pushinterface(L, ISREF(pdispVal), IID_IDispatch_String);
+      break;
+    case VT_ERROR: {
+      char sz[1024];
+      if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ISREF(scode), 0, sz, 1024, 0))
+	lua_pushstring(L, sz);
+      else
+	lua_pushstring(L, "Unknown error");
+      break;
+    }
+    case VT_BOOL: {
+      ISREF(boolVal) == -1 ? lua_pushboolean(L, 1) : lua_pushboolean(L, 0);
+      break;
+    }
+    case VT_VARIANT: comgen_push_variant(L, var->pvarVal); break;
+    case VT_UNKNOWN: 
+      comgen_pushinterface(L, ISREF(punkVal), IID_IUnknown_String);
+      break;
+    case VT_DECIMAL: luaL_error(L, "VARIANT type DECIMAL not supported"); break;
+    default: luaL_error(L, "unsupported VARIANT type %i", vt);
+  }
+}
+
 
 $interfaces[[
 

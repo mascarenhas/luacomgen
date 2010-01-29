@@ -145,10 +145,24 @@ local IRect = {
       }
     },
     { 
+      name = "SetCoords4", 
+      parameters = {
+	{ type = types.interface(IPoint), attributes = { ["in"] = true }, name = "topLeft" },
+	{ type = types.interface(IPoint), attributes = { ["in"] = true }, name = "botRight" }
+      }
+    },
+    { 
       name = "GetCoords", 
       parameters = {
 	{ type = SPoint, attributes = { out = true }, name = "topLeft" },
 	{ type = SPoint, attributes = { out = true }, name = "botRight" }
+      }
+    },
+    { 
+      name = "GetCoords2", 
+      parameters = {
+	{ type = types.interface(IPoint), attributes = { out = true }, name = "topLeft" },
+	{ type = types.interface(IPoint), attributes = { out = true }, name = "botRight" }
       }
     },
     {

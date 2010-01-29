@@ -190,15 +190,16 @@ comtypes = {
   },
   interface = {
     ctype = function (type)
-	      return type.name
+	      return type.ifname .. " *"
 	    end,
     set = function (args)
-	    
+	    local type = args[3]
+	    return args[1] .. " = (" .. type.ifname .. " *)comgen_tointerface(L, " .. args[2] .. ", \"" .. type.iid .. "\");"
 	  end,
     push = function (args)
+	     local type = args[2]
+	     return "comgen_pushinterface(L, " .. args[1] .. ", \"" .. type.iid .. "\");"
 	   end,
-    clear = function (args)
-	    end
   }
 }
 
@@ -221,7 +222,10 @@ _M.types = {
 	     end
 	     t.fields = fields
 	     return t
-	   end
+	   end,
+  interface = function (ifdesc)
+		return { name = "interface", ifname = ifdesc.name, iid = ifdesc.iid }
+	      end
 }
 
 function _M.readfile(filename, s)

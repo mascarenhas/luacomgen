@@ -42,6 +42,25 @@ STDMETHODIMP CRect::SetCoords3(SPoint * topLeft, SPoint * botRight)
     return hr;
 }
 
+STDMETHODIMP CRect::SetCoords4(IPoint * topLeft, IPoint * botRight)
+{
+    HRESULT hr = S_OK;
+    long x, y;
+    hr = topLeft->GetCoords(&x, &y);
+    if (FAILED(hr))
+      return hr;
+    if(m_topLeft)
+      hr = m_topLeft->SetCoords(x, y);
+    if (FAILED(hr))
+      return hr;
+    hr = botRight->GetCoords(&x, &y);
+    if (FAILED(hr))
+      return hr;
+    if(m_bottomRight)
+      hr = m_bottomRight->SetCoords(x, y);
+    return hr;
+}
+
 STDMETHODIMP CRect::GetCoords(SPoint * topLeft, SPoint * botRight)
 {
   HRESULT hr = S_OK;
@@ -57,6 +76,20 @@ STDMETHODIMP CRect::GetCoords(SPoint * topLeft, SPoint * botRight)
   topLeft->x = left;
   botRight->x = right;
   botRight->y = bottom;
+  return hr;
+}
+
+STDMETHODIMP CRect::GetCoords2(IPoint ** topLeft, IPoint ** botRight)
+{
+  HRESULT hr = S_OK;
+  if(m_topLeft) {
+    *topLeft = m_topLeft;
+    m_topLeft->AddRef();
+  }
+  if(m_bottomRight) {
+    *botRight = m_bottomRight;
+    m_bottomRight->AddRef();
+  }
   return hr;
 }
 

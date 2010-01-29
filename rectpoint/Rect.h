@@ -49,7 +49,9 @@ public:
 	STDMETHOD(SetCoords)(/*[in]*/ long left, /*[in]*/ long top, /*[in]*/ long right, /*[in]*/ long bottom);
 	STDMETHOD(SetCoords2)(SPoint topLeft, SPoint botRight);
 	STDMETHOD(SetCoords3)(SPoint * topLeft, SPoint * botRight);
+	STDMETHOD(SetCoords4)(IPoint * topLeft, IPoint * botRight);
 	STDMETHOD(GetCoords)(SPoint * topLeft, SPoint * botRight);
+	STDMETHOD(GetCoords2)(IPoint ** topLeft, IPoint ** botRight);
 	STDMETHOD(DrawRect)(/* [in] */ RECTTYPE type, /* [retval][out] */ long *res);
 private:
 	IPoint *m_topLeft;
