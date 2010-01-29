@@ -134,12 +134,27 @@ comtypes = {
     clear = function (args)
 	      return "VariantClear(&" .. args[1] .. ");"
 	    end,
+  },
+  bstr = {
+    ctype = function (type)
+	      return "BSTR"
+	    end,
+    set = function (args)
+	    return args[1] .. " = comgen_tobstr(L, " .. args[2] .. ");"
+	  end,
+    push = function (args)
+	     return "comgen_pushbstr(L, " .. args[1] .. ");"
+	   end,
+    clear = function (args)
+	      return "SysFreeString(" .. args[1] .. ");"
+	    end,
   }
 }
 
 _M.types = {
   long = { name = "long" },
   variant = { name = "variant" },
+  bstr = { name = "bstr" },
   enum = function (typedef)
 	   return { name = "enum", typedef = typedef }
 	 end,

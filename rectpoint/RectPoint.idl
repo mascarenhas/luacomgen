@@ -33,6 +33,8 @@ typedef struct {
 	        HRESULT SetGetCoords([in, out] VARIANT *px, [in, out] VARIANT *py);
 	        HRESULT GetType([out, retval] VARIANT *t);
 	        HRESULT RoundTrip([in] VARIANT s1, [out, retval] VARIANT *s2);
+	        HRESULT GetType2([out, retval] BSTR *t);
+	        HRESULT RoundTrip2([in] BSTR s1, [out, retval] BSTR *s2);
 	};
 	[
         object,

@@ -74,3 +74,13 @@ STDMETHODIMP CPoint::RoundTrip(VARIANT s1, /*[out, retval]*/ VARIANT *s2) {
   VariantCopy(s2, &s1);
   return S_OK;
 }
+
+STDMETHODIMP CPoint::GetType2(/*[out, retval]*/ BSTR *t) {
+  *t = SysAllocString(OLESTR("Point"));
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::RoundTrip2(BSTR s1, /*[out, retval]*/ BSTR *s2) {
+  *s2 = SysAllocString(s1);
+  return S_OK;
+}

@@ -33,6 +33,8 @@ public:
 	STDMETHOD(SetGetCoords)(/*[out]*/ VARIANT *px, /*[out]*/ VARIANT *py);
 	STDMETHOD(GetType)(/*[out, retval]*/ VARIANT *t);
 	STDMETHOD(RoundTrip)(VARIANT s1, /*[out, retval]*/ VARIANT *s2);
+	STDMETHOD(GetType2)(/*[out, retval]*/ BSTR *t);
+	STDMETHOD(RoundTrip2)(BSTR s1, /*[out, retval]*/ BSTR *s2);
 private:
 	long m_x;
 	long m_y;
