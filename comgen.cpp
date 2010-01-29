@@ -21,9 +21,23 @@ static int comgen_error(lua_State *L, HRESULT hr) {
   return 0;
 }
 
+static IUnknown *comgen_checkinterface(lua_State *L, int stkidx) {
+  lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
+  lua_getmetatable(L, stkidx);
+  if(!lua_isnil(L, -1)) {
+    lua_gettable(L, -2);
+    if(!lua_isnil(L, -1)) {
+      lua_pop(L, 2);
+      void **ud = (void **)lua_touserdata(L, stkidx);
+      return (IUnknown *)(*ud);
+    }
+  }
+  luaL_error(L, "expected COM interface, got %s", lua_typename(L, lua_type(L, stkidx)));
+  return 0;
+}
+
 static int iunknown_QueryInterface(lua_State *L) {
-  void *ud = lua_touserdata(L, 1);
-  IUnknown *p = *((IUnknown **)ud);
+  IUnknown *p = comgen_checkinterface(L, 1);
   size_t size;
   const char *siid = luaL_checklstring(L, 2, &size);
   if(size >= GUID_SIZE) {
@@ -58,16 +72,14 @@ static int iunknown_QueryInterface(lua_State *L) {
 }
 
 static int iunknown_AddRef(lua_State *L) {
-  void *ud = lua_touserdata(L, 1);
-  IUnknown *p = *((IUnknown **)ud);
+  IUnknown *p = comgen_checkinterface(L, 1);
   long r = p->AddRef();
   lua_pushinteger(L, r);
   return 1;
 }
 
 static int iunknown_Release(lua_State *L) {
-  void *ud = lua_touserdata(L, 1);
-  IUnknown *p = *((IUnknown **)ud);
+  IUnknown *p = comgen_checkinterface(L, 1);
   long r = p->Release();
   if(r == 0) {
     lua_pushnil(L);
@@ -78,8 +90,7 @@ static int iunknown_Release(lua_State *L) {
 }
 
 static int comobject_gc(lua_State *L) {
-  void *ud = lua_touserdata(L, 1);
-  IUnknown *p = *((IUnknown **)ud);
+  IUnknown *p = comgen_checkinterface(L, 1);
   p->Release();
   p = NULL;
   return 0;
@@ -101,7 +112,10 @@ static void iunknown_registermeta(lua_State *L) {
   lua_setfield(L, -2, "__gc");
   lua_pushstring(L, "IUnknown");
   lua_setfield(L, -2, "__type");
-  lua_setfield(L, -2, IID_IUnknown_String);
+  lua_pushvalue(L, -1);
+  lua_setfield(L, -3, IID_IUnknown_String);
+  lua_pushstring(L, IID_IUnknown_String);
+  lua_settable(L, -3);
 }
 
 static int comgen_createinstance(lua_State *L) {
@@ -134,7 +148,7 @@ static int comgen_createinstance(lua_State *L) {
 	lua_getfield(L, -1, siid);
 	if(lua_isnil(L, -1)) {
 	  ppv->Release();
-	  luaL_error(L, "interface not registered");
+	  luaL_error(L, "interface %s not registered", siid);
 	}
 	lua_setmetatable(L, -3);
 	lua_pop(L, 1);

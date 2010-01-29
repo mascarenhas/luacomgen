@@ -16,6 +16,16 @@ typedef struct {
   int value;
 } comgen_enum;
 
+#define GUID_SIZE 39
+
+#ifndef IID_IUnknown_String
+#define IID_IUnknown_String "{00000000-0000-0000-C000-000000000046}"
+#endif
+
+#ifndef IID_IDispatch_String
+#define IID_IDispatch_String "{00020400-0000-0000-C000-000000000046}"
+#endif
+
 static int comgen_error(lua_State *L, HRESULT hr) {
   char sz[1024];
   if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, hr, 0, sz, 1024, 0))
@@ -24,9 +34,35 @@ static int comgen_error(lua_State *L, HRESULT hr) {
   return 0;
 }
 
+static void *comgen_checkinterface(lua_State *L, int stkidx, const char *siid) {
+  lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
+  lua_getmetatable(L, stkidx);
+  if(!lua_isnil(L, -1)) {
+    lua_gettable(L, -2);
+    if(!lua_isnil(L, -1)) {
+      if(siid) {
+	lua_pushstring(L, siid);
+	if(lua_rawequal(L, -1, -2)) {
+	  lua_pop(L, 3);
+	  void **ud = (void **)lua_touserdata(L, stkidx);
+	  return *ud;
+	}
+      } else {
+	lua_pop(L, 2);
+	void **ud = (void **)lua_touserdata(L, stkidx);
+	return *ud;
+      }
+    }
+  }
+  if(siid)
+    luaL_error(L, "expected COM interface %s, got %s", siid, lua_typename(L, lua_type(L, stkidx)));
+  else
+    luaL_error(L, "expected COM interface, got %s", lua_typename(L, lua_type(L, stkidx)));
+  return 0;
+}
+
 static int comobject_gc(lua_State *L) {
-  void *ud = lua_touserdata(L, 1);
-  IUnknown *p = *((IUnknown **)ud);
+  IUnknown *p = (IUnknown *)comgen_checkinterface(L, 1, 0);
   p->Release();
   p = NULL;
   return 0;
@@ -41,7 +77,10 @@ static void comgen_registermeta(lua_State *L, const char *iid_string, const char
   lua_setfield(L, -2, "__gc");
   lua_pushstring(L, ifname);
   lua_setfield(L, -2, "__type");
-  lua_setfield(L, -2, iid_string);
+  lua_pushvalue(L, -1);
+  lua_setfield(L, -3, iid_string);
+  lua_pushstring(L, iid_string);
+  lua_settable(L, -3);
   lua_pop(L, 1);
 }
 
@@ -310,6 +349,40 @@ static void comgen_push_variant(lua_State *L, VARIANT *var) {
   }
 }
 
+static void *comgen_tointerface(lua_State *L, int stkidx, const char *siid) {
+  wchar_t wsiid[GUID_SIZE];
+  mbstowcs(wsiid, siid, GUID_SIZE);
+  IID iid;
+  IUnknown *ppv;
+  HRESULT hr;
+  hr = IIDFromString(wsiid, &iid);
+  if(SUCCEEDED(hr)) {
+    IUnknown *p = (IUnknown *)comgen_checkinterface(L, stkidx, 0);
+    hr = p->QueryInterface(iid, (void**)&ppv);
+    if(SUCCEEDED(hr)) {
+      return ppv;
+    } else {
+      comgen_error(L, hr);
+    }
+  } else {
+    comgen_error(L, hr);
+  }
+  return 0;
+}
+
+static void comgen_pushinterface(lua_State *L, void *ppv, const char *siid) {
+  void **ud = (void **)lua_newuserdata(L, sizeof(void *));
+  lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
+  lua_getfield(L, -1, siid);
+  if(lua_isnil(L, -1)) {
+    ((IUnknown*)ppv)->Release();
+    luaL_error(L, "interface %s not registered", siid);
+  }
+  lua_setmetatable(L, -3);
+  lua_pop(L, 1);
+  *ud = ppv;
+}
+
 $interfaces[[
 
 #ifndef IID_$(parent)_String
@@ -321,8 +394,7 @@ $interfaces[[
 
 $methods[[
 static int $(modname)_$(methodname)(lua_State *L) {
-  void *ud = lua_touserdata(L, 1);
-  $ifname *p = *(($ifname **)ud);
+  $ifname *p = ($ifname *)comgen_checkinterface(L, 1, IID_$(ifname)_String);
 $parameters[[  $ctype $name;
 $if{init}[[  $init{name, type}
 ]]

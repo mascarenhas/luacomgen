@@ -187,6 +187,18 @@ comtypes = {
     push = function (args)
 	     return "lua_pushstring(L, " .. args[1] .. ");"
 	   end
+  },
+  interface = {
+    ctype = function (type)
+	      return type.name
+	    end,
+    set = function (args)
+	    
+	  end,
+    push = function (args)
+	   end,
+    clear = function (args)
+	    end
   }
 }
 
