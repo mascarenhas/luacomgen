@@ -84,3 +84,33 @@ assert(s == "Foo Bar")
 -- this test only works if file is encoded as UTF-8!
 local s = p:RoundTrip2("Constituição")
 assert(s == "Constituição")
+
+local t = p:GetType3()
+assert(t == "Point")
+
+local s = p:RoundTrip3("Foo Bar")
+assert(s == "Foo Bar")
+
+-- this test only works if file is encoded as UTF-8!
+local s = p:RoundTrip3("Constituição")
+assert(s == "Constituição")
+
+local t = p:GetType4()
+assert(t == "Point")
+
+local s = p:RoundTrip4("Foo Bar")
+assert(s == "Foo Bar")
+
+-- this test only works if file is encoded as UTF-8!
+local s = p:RoundTrip4("Constituição")
+assert(s == "Constituição")
+
+local t = p:GetType5()
+assert(t == "Point")
+
+local s = p:RoundTrip5("Foo Bar")
+assert(s == "Foo Bar")
+
+-- this test only works if file is encoded as UTF-8!
+local s = p:RoundTrip5("Constituição")
+assert(s == "Constituição")

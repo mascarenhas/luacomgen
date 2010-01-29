@@ -85,11 +85,30 @@ $fields[[  { "$name", $value },
 
 ]]
 
-static BSTR comgen_tobstr(lua_State *L, int stkidx) {
+static wchar_t *comgen_towstr(lua_State *L, int stkidx) {
   const char *s = lua_tostring(L, stkidx);
   int size = MultiByteToWideChar(CP_UTF8, 0, s, -1, 0, 0);
   wchar_t *ws = new wchar_t[size];
   MultiByteToWideChar(CP_UTF8, 0, s, -1, ws, size);
+  return ws;
+}
+
+static void comgen_pushwstr(lua_State *L, wchar_t *ts) {
+  int size = WideCharToMultiByte(CP_UTF8, 0, ts, -1, /* s */ 0, /* size */ 0, 0, 0);
+  char *s = new char[size];
+  WideCharToMultiByte(CP_UTF8, 0, ts, -1, s, size, 0, 0);
+  lua_pushstring(L, s);
+  delete s;
+}
+
+static void comgen_clearwstr(wchar_t *ts) {
+  #ifdef UNICODE
+    delete s;
+  #endif
+}
+
+static BSTR comgen_tobstr(lua_State *L, int stkidx) {
+  wchar_t *ws = comgen_towstr(L, stkidx);
   BSTR b = SysAllocString(ws);
   delete ws;
   return b;
@@ -97,11 +116,29 @@ static BSTR comgen_tobstr(lua_State *L, int stkidx) {
 
 static void comgen_pushbstr(lua_State *L, BSTR b) {
   b = b ? b : OLESTR("");
-  int size = WideCharToMultiByte(CP_UTF8, 0, b, -1, /* s */ 0, /* size */ 0, 0, 0);
-  char *s = new char[size];
-  WideCharToMultiByte(CP_UTF8, 0, b, -1, s, size, 0, 0);
-  lua_pushstring(L, s);
-  delete s;
+  comgen_pushwstr(L, b);
+}
+
+static TCHAR *comgen_totstr(lua_State *L, int stkidx) {
+  #ifdef UNICODE
+    return comgen_towstr(L, stkidx);
+  #else
+    return (TCHAR*)lua_tostring(L, stkidx);
+  #endif
+}
+
+static void comgen_pushtstr(lua_State *L, TCHAR *ts) {
+  #ifdef UNICODE
+    comgen_pushwstr(L, ts);
+  #else
+    lua_pushstring(L, ts);
+  #endif
+}
+
+static void comgen_cleartstr(TCHAR *ts) {
+  #ifdef UNICODE
+    comgen_clearwstr(ts);
+  #endif
 }
 
 #define ISREF(T) (isref ? *(var->p##T) : var->T)

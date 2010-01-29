@@ -135,7 +135,7 @@ comtypes = {
 	      return "VariantClear(&" .. args[1] .. ");"
 	    end,
   },
-  bstr = {
+  bstring = {
     ctype = function (type)
 	      return "BSTR"
 	    end,
@@ -148,13 +148,55 @@ comtypes = {
     clear = function (args)
 	      return "SysFreeString(" .. args[1] .. ");"
 	    end,
+  },
+  tstring = {
+    ctype = function (type)
+	      return "LPTSTR"
+	    end,
+    set = function (args)
+	    return args[1] .. " = comgen_totstr(L, " .. args[2] .. ");"
+	  end,
+    push = function (args)
+	     return "comgen_pushtstr(L, " .. args[1] .. ");"
+	   end,
+    clear = function (args)
+	      return "comgen_cleartstr(" .. args[1] .. ");"
+	    end,
+  },
+  wstring = {
+    ctype = function (type)
+	      return "LPWSTR"
+	    end,
+    set = function (args)
+	    return args[1] .. " = comgen_towstr(L, " .. args[2] .. ");"
+	  end,
+    push = function (args)
+	     return "comgen_pushwstr(L, " .. args[1] .. ");"
+	   end,
+    clear = function (args)
+	      return "comgen_clearwstr(" .. args[1] .. ");"
+	    end,
+  },
+  string = {
+    ctype = function (type)
+	      return "LPSTR"
+	    end,
+    set = function (args)
+	    return args[1] .. " = (char*)lua_tostring(L, " .. args[2] .. ");"
+	  end,
+    push = function (args)
+	     return "lua_pushstring(L, " .. args[1] .. ");"
+	   end
   }
 }
 
 _M.types = {
   long = { name = "long" },
   variant = { name = "variant" },
-  bstr = { name = "bstr" },
+  bstring = { name = "bstring" },
+  tstring = { name = "tstring" },
+  wstring = { name = "wstring" },
+  string = { name = "string" },
   enum = function (typedef)
 	   return { name = "enum", typedef = typedef }
 	 end,

@@ -64,14 +64,53 @@ local IPoint = {
     {
       name = "GetType2",
       parameters = {
-	{ type = types.bstr, attributes = { retval = true, out = true }, name = "t" },
+	{ type = types.bstring, attributes = { retval = true, out = true }, name = "t" },
       }
     },
     {
       name = "RoundTrip2",
       parameters = {
-	{ type = types.bstr, attributes = { ["in"] = true }, name = "s1" },
-	{ type = types.bstr, attributes = { retval = true, out = true }, name = "s2" },
+	{ type = types.bstring, attributes = { ["in"] = true }, name = "s1" },
+	{ type = types.bstring, attributes = { retval = true, out = true }, name = "s2" },
+      }
+    },
+    {
+      name = "GetType3",
+      parameters = {
+	{ type = types.tstring, attributes = { retval = true, out = true }, name = "t" },
+      }
+    },
+    {
+      name = "RoundTrip3",
+      parameters = {
+	{ type = types.tstring, attributes = { ["in"] = true }, name = "s1" },
+	{ type = types.tstring, attributes = { retval = true, out = true }, name = "s2" },
+      }
+    },
+    {
+      name = "GetType4",
+      parameters = {
+	{ type = types.wstring, attributes = { retval = true, out = true }, name = "t" },
+      }
+    },
+    {
+      name = "RoundTrip4",
+      parameters = {
+	{ type = types.wstring, attributes = { ["in"] = true }, name = "s1" },
+	{ type = types.wstring, attributes = { retval = true, out = true }, name = "s2" },
+      }
+    },
+    {
+      name = "GetType5",
+      parameters = {
+	{ type = types.string, attributes = { retval = true, out = true }, name = "t" },
+      }
+    },
+    {
+      name = "RoundTrip5",
+      parameters = {
+	{ type = types.string, attributes = { ["in"] = true }, name = "s1" },
+	{ type = types.string, attributes = { retval = true, out = true }, name = "s2" },
       }
     },
   }

@@ -35,6 +35,12 @@ public:
 	STDMETHOD(RoundTrip)(VARIANT s1, /*[out, retval]*/ VARIANT *s2);
 	STDMETHOD(GetType2)(/*[out, retval]*/ BSTR *t);
 	STDMETHOD(RoundTrip2)(BSTR s1, /*[out, retval]*/ BSTR *s2);
+	STDMETHOD(GetType3)(/*[out, retval]*/ LPTSTR *t);
+	STDMETHOD(RoundTrip3)(LPTSTR s1, /*[out, retval]*/ LPTSTR *s2);
+	STDMETHOD(GetType4)(/*[out, retval]*/ LPWSTR *t);
+	STDMETHOD(RoundTrip4)(LPWSTR s1, /*[out, retval]*/ LPWSTR *s2);
+	STDMETHOD(GetType5)(/*[out, retval]*/ LPSTR *t);
+	STDMETHOD(RoundTrip5)(LPSTR s1, /*[out, retval]*/ LPSTR *s2);
 private:
 	long m_x;
 	long m_y;

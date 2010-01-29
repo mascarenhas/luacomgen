@@ -84,3 +84,33 @@ STDMETHODIMP CPoint::RoundTrip2(BSTR s1, /*[out, retval]*/ BSTR *s2) {
   *s2 = SysAllocString(s1);
   return S_OK;
 }
+
+STDMETHODIMP CPoint::GetType3(/*[out, retval]*/ LPTSTR *t) {
+  *t = _T("Point");
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::RoundTrip3(LPTSTR s1, /*[out, retval]*/ LPTSTR *s2) {
+  *s2 = s1;
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::GetType4(/*[out, retval]*/ LPWSTR *t) {
+  *t = L"Point";
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::RoundTrip4(LPWSTR s1, /*[out, retval]*/ LPWSTR *s2) {
+  *s2 = s1;
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::GetType5(/*[out, retval]*/ LPSTR *t) {
+  *t = "Point";
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::RoundTrip5(LPSTR s1, /*[out, retval]*/ LPSTR *s2) {
+  *s2 = s1;
+  return S_OK;
+}
