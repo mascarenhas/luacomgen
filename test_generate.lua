@@ -48,6 +48,19 @@ local IPoint = {
 	{ type = types.variant, attributes = { ["in"] = true, out = true }, name = "py" }
       }
     },
+    {
+      name = "GetType",
+      parameters = {
+	{ type = types.variant, attributes = { retval = true, out = true }, name = "t" },
+      }
+    },
+    {
+      name = "RoundTrip",
+      parameters = {
+	{ type = types.variant, attributes = { ["in"] = true }, name = "s1" },
+	{ type = types.variant, attributes = { retval = true, out = true }, name = "s2" },
+      }
+    },
   }
 }
 

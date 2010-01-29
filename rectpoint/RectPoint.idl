@@ -31,6 +31,8 @@ typedef struct {
 		HRESULT SetCoords([in] long x, [in] long y);
 		HRESULT SetCoords2([in] VARIANT x, [in] VARIANT y);
 	        HRESULT SetGetCoords([in, out] VARIANT *px, [in, out] VARIANT *py);
+	        HRESULT GetType([out, retval] VARIANT *t);
+	        HRESULT RoundTrip([in] VARIANT s1, [out, retval] VARIANT *s2);
 	};
 	[
         object,

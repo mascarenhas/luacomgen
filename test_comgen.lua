@@ -39,12 +39,38 @@ assert(r:get_Volume() == -4)
 p:SetCoords2(3, 4)
 local x, y = p:GetCoords()
 assert(x == 3 and y == 4)
+
 local x, y = p:GetCoords2()
 assert(x == 3 and y == 4)
+
 local x, y = p:SetGetCoords(4, 5)
 assert(x == 3 and y == 4)
+
 local x, y = p:GetCoords()
 assert(x == 4 and y == 5)
+
 p:SetCoords2({ type = "I4", value = 2 }, { type = "INT", value = 3 })
 local x, y = p:GetCoords()
 assert(x == 2 and y == 3)
+
+p:SetCoords2("5", { type = "INT", value = 3 })
+local x, y = p:GetCoords()
+assert(x == 5 and y == 3)
+
+p:SetCoords2("5", "2")
+local x, y = p:GetCoords()
+assert(x == 5 and y == 2)
+
+p:SetCoords2("5", { type = "BSTR", value = "2" })
+local x, y = p:GetCoords()
+assert(x == 5 and y == 2)
+
+local t = p:GetType()
+assert(t == "Point")
+
+local s = p:RoundTrip("Foo Bar")
+assert(s == "Foo Bar")
+
+-- this test only works if file is encoded as UTF-8!
+local s = p:RoundTrip("Constituição")
+assert(s == "Constituição")

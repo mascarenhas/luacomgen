@@ -31,6 +31,8 @@ public:
 	STDMETHOD(GetCoords)(/*[out]*/ long *px, /*[out]*/ long *py);
 	STDMETHOD(GetCoords2)(/*[out]*/ VARIANT *px, /*[out]*/ VARIANT *py);
 	STDMETHOD(SetGetCoords)(/*[out]*/ VARIANT *px, /*[out]*/ VARIANT *py);
+	STDMETHOD(GetType)(/*[out, retval]*/ VARIANT *t);
+	STDMETHOD(RoundTrip)(VARIANT s1, /*[out, retval]*/ VARIANT *s2);
 private:
 	long m_x;
 	long m_y;

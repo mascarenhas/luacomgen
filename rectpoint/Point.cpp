@@ -63,3 +63,14 @@ STDMETHODIMP CPoint::SetGetCoords(/*[out]*/ VARIANT *px, /*[out]*/ VARIANT *py) 
   VariantClear(&vy);
   return S_OK;
 }
+
+STDMETHODIMP CPoint::GetType(/*[out, retval]*/ VARIANT *t) {
+  t->vt = VT_BSTR;
+  t->bstrVal = SysAllocString(OLESTR("Point"));
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::RoundTrip(VARIANT s1, /*[out, retval]*/ VARIANT *s2) {
+  VariantCopy(s2, &s1);
+  return S_OK;
+}

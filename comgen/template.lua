@@ -1,6 +1,7 @@
 
 return [==[
 
+#include <stdio.h>
 #include "$(header).h"
 #include "$(header)_i.c"
 
@@ -84,9 +85,27 @@ $fields[[  { "$name", $value },
 
 ]]
 
+static BSTR comgen_tobstr(lua_State *L, int stkidx) {
+  const char *s = lua_tostring(L, stkidx);
+  int size = MultiByteToWideChar(CP_UTF8, 0, s, -1, 0, 0);
+  wchar_t *ws = new wchar_t[size];
+  MultiByteToWideChar(CP_UTF8, 0, s, -1, ws, size);
+  BSTR b = SysAllocString(ws);
+  delete ws;
+  return b;
+}
+
+static void comgen_pushbstr(lua_State *L, BSTR b) {
+  int size = WideCharToMultiByte(CP_UTF8, 0, b, -1, /* s */ 0, /* size */ 0, 0, 0);
+  char *s = new char[size];
+  WideCharToMultiByte(CP_UTF8, 0, b, -1, s, size, 0, 0);
+  lua_pushstring(L, s);
+  delete s;
+}
+
 #define ISREF(T) (isref ? *(var->p##T) : var->T)
 
-#define ISREF_S(T,V) if(isref) { *(var->p##T)=V; } else { var->T=V; }
+#define ISREF_S(T,V) if(isref) { luaL_error(L, "not supported"); } else { var->T=V; }
 
 #define VT(T) { VT_##T, #T }
 
@@ -160,6 +179,7 @@ static void comgen_converttable(lua_State *L, int stkidx, VARIANT *var) {
     case VT_CY: luaL_error(L, "VARIANT type CY not supported"); break;
     case VT_DATE: ISREF_S(date, lua_tonumber(L, -1)); break;
     case VT_BSTR: {
+      ISREF_S(bstrVal, comgen_tobstr(L, -1));
       break;
     }
     case VT_DISPATCH: luaL_error(L, "VARIANT type DISPATCH not supported"); break;
@@ -187,9 +207,11 @@ static void comgen_set_variant(lua_State *L, int stkidx, VARIANT *var) {
       var->vt = VT_R8;
       var->dblVal = lua_tonumber(L, stkidx);
       break;
-    case LUA_TSTRING:
-      luaL_error(L, "passing strings to variants is not supported yet");
+    case LUA_TSTRING: {
+      var->vt = VT_BSTR;
+      var->bstrVal = comgen_tobstr(L, stkidx);
       break;
+    }
     case LUA_TNIL:
       var->vt = VT_EMPTY;
       break;
@@ -227,7 +249,7 @@ static void comgen_push_variant(lua_State *L, VARIANT *var) {
     case VT_CY: luaL_error(L, "VARIANT type CY not supported"); break;
     case VT_DATE: lua_pushnumber(L, ISREF(date)); break;
     case VT_BSTR: {
-      BSTR b = ISREF(bstrVal);
+      comgen_pushbstr(L, ISREF(bstrVal));
       break;
     }
     case VT_DISPATCH: luaL_error(L, "VARIANT type DISPATCH not supported"); break;
