@@ -11,6 +11,9 @@ Now open an administrator console, register rectpoint\rectpoint.dll with regsvr3
 The Makefile assumes you have LuaRocks installed, along with the latest version of Cosmo (install
 with "luarocks install cosmo current --from=http://luarocks.org/repositories/rocks-cvs".
 
-Right now the only data type that the generator supports is "long", but I am going to add the whole
-menagerie of COM primitive types, plus VARIANT, along with support for reading type libraries directly.
+Types supported right now: longs, strings (normal, wide, tchar, bstr), I assume strings on the
+Lua side are UTF-8 encoded, COM interfaces pointers created by the binding, enums, structs
+(nesting should work, but is untested), and most VARIANTs (notable omission being SAFEARRAYS).
 
+The goal is to add the whole menagerie of COM primitive types, along with support for reading type
+libraries directly. It should be powerful enough to rewrite LuaCOM in pure Lua. :-)
