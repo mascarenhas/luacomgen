@@ -96,6 +96,7 @@ static BSTR comgen_tobstr(lua_State *L, int stkidx) {
 }
 
 static void comgen_pushbstr(lua_State *L, BSTR b) {
+  b = b ? b : OLESTR("");
   int size = WideCharToMultiByte(CP_UTF8, 0, b, -1, /* s */ 0, /* size */ 0, 0, 0);
   char *s = new char[size];
   WideCharToMultiByte(CP_UTF8, 0, b, -1, s, size, 0, 0);
