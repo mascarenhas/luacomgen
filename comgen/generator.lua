@@ -57,9 +57,44 @@ local template_clear_struct = cosmo.compile[=[
   ]]
 ]=]
 
+local template_set_safearray = cosmo.compile[=[
+  size_t __$(name)_n = lua_objlen(L, $stkidx);
+  $name = SafeArrayCreateVector(comgen_name2vt(L, "$(elem.vt)"), $lbound, __$(name)_n);
+  if(!$name) luaL_error(L, "could not create SAFEARRAY $name");
+  $(elem.ctype) * __$(name)_elems;
+  hr = SafeArrayAccessData($name, (void**)&__$(name)_elems);
+  if(!SUCCEEDED(hr)) luaL_error(L, "could not access SAFEARRAY $name");
+  for(long i = $lbound, j = 1; j <= __$(name)_n; i++, j++) {
+    $if{elem.init}[[$(elem.init){ "__" .. name .. "_elems[i]" , elem.type }]]
+    lua_pushinteger(L, j);
+    lua_gettable(L, $stkidx);
+    $(elem.set){ "__" .. name .. "_elems[i]", -1, elem.type }
+    lua_pop(L, 1);
+  }
+  SafeArrayUnaccessData($name);
+]=]
+
+local template_push_safearray = cosmo.compile[=[
+  if(SafeArrayGetDim($name) != 1) luaL_error(L, "SAFEARRAY $name is not a vector");
+  $(elem.ctype) * __$(name)_elems;
+  hr = SafeArrayAccessData($name, (void**)&__$(name)_elems);
+  if(!SUCCEEDED(hr)) luaL_error(L, "could not access SAFEARRAY $name");
+  long lbound, ubound;
+  SafeArrayGetUBound($name, 1, &ubound);
+  SafeArrayGetLBound($name, 1, &lbound);
+  lua_newtable(L);
+  for(long i = lbound, j = 1; i<= ubound; i++, j++) {
+    lua_pushinteger(L, j);
+    $(elem.push){ "__" .. name .. "_elems[i]", elem.type }
+    lua_settable(L, -3);
+  }
+  SafeArrayUnaccessData($name);
+]=]
+
 local comtypes 
 comtypes = {
   long = {
+    vt = "I4",
     ctype = function (type)
 	      return type.name
 	    end,
@@ -119,6 +154,7 @@ comtypes = {
 	    end
   },
   variant = {
+    vt = "VARIANT",
     ctype = function (type)
 	      return "VARIANT"
 	    end,
@@ -136,6 +172,7 @@ comtypes = {
 	    end,
   },
   bstring = {
+    vt = "BSTR",
     ctype = function (type)
 	      return "BSTR"
 	    end,
@@ -177,6 +214,33 @@ comtypes = {
 	      return "comgen_clearwstr(" .. args[1] .. ");"
 	    end,
   },
+  safearray = {
+    ctype = function (type)
+	      return "SAFEARRAY *"
+	    end,
+    set = function (args)
+	    return template_set_safearray{ name = args[1], stkidx = args[2],
+					   lbound = args[3].lbound or 0, 
+					   elem = { 
+					     set = comtypes[args[3].elem.name].set, 
+					     ctype = comtypes[args[3].elem.name].ctype(args[3].elem),
+					     init = comtypes[args[3].elem.name].init,
+					     type = args[3].elem,
+					     vt = comtypes[args[3].elem.name].vt
+					   }, ["if"] = cosmo.cif }
+	  end,
+    push = function (args)
+	     return template_push_safearray{ name = args[1],
+					    elem = { 
+					      ctype = comtypes[args[2].elem.name].ctype(args[2].elem),
+					      push = comtypes[args[2].elem.name].push,
+					      type = args[2].elem,
+					    }, ["if"] = cosmo.cif }
+	   end,
+    clear = function (args)
+	      return "SafeArrayDestroy(" .. args[1] .. ");"
+	    end
+  },
   string = {
     ctype = function (type)
 	      return "LPSTR"
@@ -189,6 +253,7 @@ comtypes = {
 	   end
   },
   interface = {
+    vt = "UNKNOWN",
     ctype = function (type)
 	      return type.ifname .. " *"
 	    end,
@@ -225,6 +290,9 @@ _M.types = {
 	   end,
   interface = function (ifdesc)
 		return { name = "interface", ifname = ifdesc.name, iid = ifdesc.iid }
+	      end,
+  safearray = function (vartype, lbound)
+		return { name = "safearray", lbound = lbound, elem = vartype }
 	      end
 }
 

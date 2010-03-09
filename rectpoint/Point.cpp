@@ -1,4 +1,5 @@
 // Point.cpp : Implementation of CPoint
+#include <assert.h>
 #include "stdafx.h"
 #include "RectPoint.h"
 #include "Point.h"
@@ -112,5 +113,36 @@ STDMETHODIMP CPoint::GetType5(/*[out, retval]*/ LPSTR *t) {
 
 STDMETHODIMP CPoint::RoundTrip5(LPSTR s1, /*[out, retval]*/ LPSTR *s2) {
   *s2 = s1;
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::Sum(SAFEARRAY **ppsa, /*[out, retval]*/ long *pSum) {
+  assert(ppsa && *ppsa && pSum);
+  assert(SafeArrayGetDim(*ppsa) == 1);
+  long ubound, lbound;
+  HRESULT hr = SafeArrayGetUBound(*ppsa, 1, &ubound);
+  assert(SUCCEEDED(hr));
+  hr = SafeArrayGetLBound(*ppsa, 1, &lbound);
+  assert(SUCCEEDED(hr));
+  long *prgn;
+  hr = SafeArrayAccessData(*ppsa, (void**)&prgn);
+  assert(SUCCEEDED(hr));
+  *pSum = 0;
+  for (long i = lbound; i <= ubound; i++)
+    *pSum += prgn[i];
+  SafeArrayUnaccessData(*ppsa);
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::GetCoordsArr(SAFEARRAY **ppsa) {
+  if(!ppsa) return E_INVALIDARG;
+  *ppsa = SafeArrayCreateVector(VT_I4, 0, 2);
+  if(!*ppsa) return E_INVALIDARG;
+  long *prgn = 0;
+  HRESULT hr = SafeArrayAccessData(*ppsa, (void**)&prgn);
+  if(!SUCCEEDED(hr)) return hr;
+  prgn[0] = m_x;
+  prgn[1] = m_y;
+  SafeArrayUnaccessData(*ppsa);
   return S_OK;
 }

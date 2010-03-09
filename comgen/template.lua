@@ -217,6 +217,8 @@ static COMGEN_VARTYPE comgen_vartypes[] = {
   VT(ERROR),
   VT(BOOL),
   VT(VARIANT),
+  VT(UNKNOWN),
+  VT(DISPATCH),
   { 0, NULL }
 };
 
@@ -416,13 +418,14 @@ $interfaces[[
 
 $methods[[
 static int $(modname)_$(methodname)(lua_State *L) {
+  HRESULT hr;
   $ifname *p = ($ifname *)comgen_checkinterface(L, 1, IID_$(ifname)_String);
 $parameters[[  $ctype $name;
 $if{init}[[  $init{name, type}
 ]]
 $if{set}[[  $set{name, pos, type}
 ]]]]
-  HRESULT hr = p->$cname($concat{parameters}[[$pass]]);
+  hr = p->$cname($concat{parameters}[[$pass]]);
   if(SUCCEEDED(hr)) {
     $pushret
 $parameters[[$if{push}[[    $push{name,type}

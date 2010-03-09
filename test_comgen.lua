@@ -129,3 +129,12 @@ local x, y = p2:GetCoords()
 assert(x == 5 and y == 3)
 p1:SetCoords(1, 5)
 assert(r:get_Volume() == -8)
+
+assert(p1:Sum({ 1, 2, 3, 4, 5 }) == 15)
+assert(not pcall(p1.Sum, p1, { 1, 2, "foo", 3, 4, 5 }))
+assert(p1:Sum({ 1.1, 2.2, 3.3, 4.4, 5.4 }) == 15)
+
+local arr = p1:GetCoordsArr()
+assert(#arr == 2)
+assert(arr[1] == 1)
+assert(arr[2] == 5)

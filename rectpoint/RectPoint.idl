@@ -41,6 +41,8 @@ typedef struct {
 	        HRESULT RoundTrip4([in] LPWSTR s1, [out, retval] LPWSTR *s2);
 	        HRESULT GetType5([out, retval] LPSTR *t);
 	        HRESULT RoundTrip5([in] LPSTR s1, [out, retval] LPSTR *s2);
+    	        HRESULT Sum([in] SAFEARRAY(long) *ppsa, [out, retval] long *psum);
+	        HRESULT GetCoordsArr([out, retval] SAFEARRAY(long) *ppsa);
 	};
 	[
         object,
