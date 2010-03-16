@@ -13,7 +13,11 @@ with "luarocks install cosmo current --from=http://luarocks.org/repositories/roc
 
 Types supported right now: longs, strings (normal, wide, tchar, bstr), I assume strings on the
 Lua side are UTF-8 encoded, COM interfaces pointers created by the binding, enums, structs
-(nesting should work, but is untested), and most VARIANTs (notable omission being SAFEARRAYS).
+(nesting should work, but is untested), SAFEARRAYs of these types, and most types of VARIANT,
+including VARIANT SAFEARRAYs.
 
 The goal is to add the whole menagerie of COM primitive types, along with support for reading type
 libraries directly. It should be powerful enough to rewrite LuaCOM in pure Lua. :-)
+
+The source is the documentation, for now. :-) The test_generate.lua and test_comgen.lua are a nice
+overview of the API for generating a binding and using it, respectively,
