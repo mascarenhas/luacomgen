@@ -105,6 +105,18 @@ comtypes = {
 	     return "lua_pushinteger(L, " .. args[1] .. ");"
 	   end,
   },
+  double = {
+    vt = "R8",
+    ctype = function (type)
+	      return type.name
+	    end,
+    set = function (args)
+	    return args[1] .. " = luaL_checknumber(L, " .. args[2] .. ");" 
+	  end,
+    push = function (args)
+	     return "lua_pushnumber(L, " .. args[1] .. ");"
+	   end,
+  },
   enum = {
     ctype = function (type)
 	      return type.typedef
@@ -270,6 +282,7 @@ comtypes = {
 
 _M.types = {
   long = { name = "long" },
+  double = { name = "double" },
   variant = { name = "variant" },
   bstring = { name = "bstring" },
   tstring = { name = "tstring" },

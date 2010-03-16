@@ -283,7 +283,7 @@ static void comgen_clear_safearray(SAFEARRAY *parr);
 				    for(long i = 0, j = 1; i < n; i++, j++) { \
 				      lua_pushinteger(L, j); \
 				      lua_gettable(L, -2); \
-				      v[i] = tof(L, -1); \
+				      v[i] = tof(L, lua_gettop(L)); \
 				      lua_pop(L, 1); \
 				    } \
 				    break; \
@@ -383,7 +383,7 @@ static void comgen_converttable(lua_State *L, int stkidx, VARIANT *var) {
       break;
     }
     case VT_DISPATCH:
-      ISREF_S(pdispVal, (IDispatch *)comgen_tointerface(L, -1, IID_IDispatch_String));
+      ISREF_S(pdispVal, (IDispatch *)comgen_tointerface(L, lua_gettop(L), IID_IDispatch_String));
       break;
     case VT_ERROR: {
       ISREF_S(scode, lua_tointeger(L, -1));
@@ -395,7 +395,7 @@ static void comgen_converttable(lua_State *L, int stkidx, VARIANT *var) {
     }
     case VT_VARIANT: comgen_set_variant(L, lua_gettop(L), var->pvarVal); break;
     case VT_UNKNOWN:
-      ISREF_S(punkVal, (IUnknown *)comgen_tointerface(L, -1, IID_IUnknown_String));
+      ISREF_S(punkVal, (IUnknown *)comgen_tointerface(L, lua_gettop(L), IID_IUnknown_String));
       break;
     case VT_DECIMAL: luaL_error(L, "VARIANT type DECIMAL not supported"); break;
     default: luaL_error(L, "unsupported VARIANT type %i", vt);

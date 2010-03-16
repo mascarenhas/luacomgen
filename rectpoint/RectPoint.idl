@@ -45,6 +45,7 @@ typedef struct {
 	        HRESULT GetCoordsArr([out, retval] SAFEARRAY(long) *ppsa);
     	        HRESULT Sum2([in] VARIANT var, [out, retval] long *psum);
 	        HRESULT GetCoordsArr2([out, retval] VARIANT *pvar);
+    	        HRESULT Length([in] VARIANT var, [out, retval] double *psum);
 	};
 	[
         object,

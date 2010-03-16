@@ -1,5 +1,6 @@
 // Point.cpp : Implementation of CPoint
 #include <assert.h>
+#include <math.h>
 #include "stdafx.h"
 #include "RectPoint.h"
 #include "Point.h"
@@ -177,6 +178,39 @@ STDMETHODIMP CPoint::Sum2(/* in */ VARIANT var, /*[out, retval]*/ long *pSum) {
   *pSum = 0;
   for (long i = lbound; i <= ubound; i++)
     *pSum += prgn[i];
+  SafeArrayUnaccessData(psa);
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::Length(/* in */ VARIANT var, /*[out, retval]*/ double *pSum) {
+  assert(pSum);
+  assert(var.vt == (VT_ARRAY | VT_UNKNOWN));
+  SAFEARRAY *psa = var.parray;
+  assert(SafeArrayGetDim(psa) == 1);
+  long ubound, lbound;
+  HRESULT hr = SafeArrayGetUBound(psa, 1, &ubound);
+  if(!SUCCEEDED(hr)) return hr;
+  hr = SafeArrayGetLBound(psa, 1, &lbound);
+  if(!SUCCEEDED(hr)) return hr;
+  IUnknown **prgn;
+  hr = SafeArrayAccessData(psa, (void**)&prgn);
+  if(!SUCCEEDED(hr)) return hr;
+  *pSum = 0;
+  for (long i = lbound + 1; i <= ubound; i++) {
+    IPoint *p1, *p2;
+    hr = prgn[i-1]->QueryInterface(IID_IPoint, (void**)&p1);
+    if(!SUCCEEDED(hr)) return hr;
+    hr = prgn[i]->QueryInterface(IID_IPoint, (void**)&p2);
+    if(!SUCCEEDED(hr)) return hr;
+    long x1, x2, y1, y2;
+    hr = p1->GetCoords(&x1, &y1);
+    if(!SUCCEEDED(hr)) return hr;
+    hr = p2->GetCoords(&x2, &y2);
+    if(!SUCCEEDED(hr)) return hr;
+    *pSum += sqrt(pow((double)(x2-x1), 2.0) + pow((double)(y2-y1), 2.0));
+    p1->Release();
+    p2->Release();
+  }
   SafeArrayUnaccessData(psa);
   return S_OK;
 }

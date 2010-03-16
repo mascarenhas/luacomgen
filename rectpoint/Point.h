@@ -45,6 +45,7 @@ public:
 	STDMETHOD(GetCoordsArr)(SAFEARRAY **ppsa);
 	STDMETHOD(Sum2)(VARIANT var, /*[out, retval]*/ long *pSum);
 	STDMETHOD(GetCoordsArr2)(VARIANT *pvar);
+	STDMETHOD(Length)(VARIANT var, /*[out, retval]*/ double *pSum);
 private:
 	long m_x;
 	long m_y;

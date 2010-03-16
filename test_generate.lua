@@ -139,6 +139,13 @@ local IPoint = {
 	{ type = types.variant, attributes = { out = true, retval = true }, name = "pvar" },
       }
     },
+    {
+      name = "Length",
+      parameters = {
+	{ type = types.variant, attributes = { ["in"] = true }, name = "var" },
+	{ type = types.double, attributes = { retval = true, out = true }, name = "pSum" },
+      }
+    },
   }
 }
 
