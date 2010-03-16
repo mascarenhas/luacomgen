@@ -43,6 +43,8 @@ public:
 	STDMETHOD(RoundTrip5)(LPSTR s1, /*[out, retval]*/ LPSTR *s2);
 	STDMETHOD(Sum)(SAFEARRAY **ppsa, /*[out, retval]*/ long *pSum);
 	STDMETHOD(GetCoordsArr)(SAFEARRAY **ppsa);
+	STDMETHOD(Sum2)(VARIANT var, /*[out, retval]*/ long *pSum);
+	STDMETHOD(GetCoordsArr2)(VARIANT *pvar);
 private:
 	long m_x;
 	long m_y;

@@ -126,6 +126,19 @@ local IPoint = {
 	{ type = types.safearray(types.long), attributes = { out = true, retval = true }, name = "ppsa" },
       }
     },
+    {
+      name = "Sum2",
+      parameters = {
+	{ type = types.variant, attributes = { ["in"] = true }, name = "var" },
+	{ type = types.long, attributes = { retval = true, out = true }, name = "pSum" },
+      }
+    },
+    {
+      name = "GetCoordsArr2",
+      parameters = {
+	{ type = types.variant, attributes = { out = true, retval = true }, name = "pvar" },
+      }
+    },
   }
 }
 

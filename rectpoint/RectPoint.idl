@@ -43,6 +43,8 @@ typedef struct {
 	        HRESULT RoundTrip5([in] LPSTR s1, [out, retval] LPSTR *s2);
     	        HRESULT Sum([in] SAFEARRAY(long) *ppsa, [out, retval] long *psum);
 	        HRESULT GetCoordsArr([out, retval] SAFEARRAY(long) *ppsa);
+    	        HRESULT Sum2([in] VARIANT var, [out, retval] long *psum);
+	        HRESULT GetCoordsArr2([out, retval] VARIANT *pvar);
 	};
 	[
         object,

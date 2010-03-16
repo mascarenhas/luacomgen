@@ -138,3 +138,11 @@ local arr = p1:GetCoordsArr()
 assert(#arr == 2)
 assert(arr[1] == 1)
 assert(arr[2] == 5)
+
+assert(p1:Sum2({ type = "I4", value = { 1, 2, 3, 4, 5 } }) == 15)
+assert(p1:Sum2({ type = "I4", value = { 1.1, 2.2, 3.3, 4.4, 5.4 } }) == 15)
+
+local arr = p1:GetCoordsArr2()
+assert(#arr == 2)
+assert(arr[1] == 1)
+assert(arr[2] == 5)

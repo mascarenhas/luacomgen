@@ -146,3 +146,37 @@ STDMETHODIMP CPoint::GetCoordsArr(SAFEARRAY **ppsa) {
   SafeArrayUnaccessData(*ppsa);
   return S_OK;
 }
+
+STDMETHODIMP CPoint::GetCoordsArr2(/*out, retval */ VARIANT *pvar) {
+  assert(pvar);
+  pvar->vt = VT_ARRAY | VT_I4;
+  pvar->parray = SafeArrayCreateVector(VT_I4, 0, 2);
+  if(!pvar->parray) return E_INVALIDARG;
+  long *prgn = 0;
+  HRESULT hr = SafeArrayAccessData(pvar->parray, (void**)&prgn);
+  if(!SUCCEEDED(hr)) return hr;
+  prgn[0] = m_x;
+  prgn[1] = m_y;
+  SafeArrayUnaccessData(pvar->parray);
+  return S_OK;
+}
+
+STDMETHODIMP CPoint::Sum2(/* in */ VARIANT var, /*[out, retval]*/ long *pSum) {
+  assert(pSum);
+  assert(var.vt == (VT_ARRAY | VT_I4));
+  SAFEARRAY *psa = var.parray;
+  assert(SafeArrayGetDim(psa) == 1);
+  long ubound, lbound;
+  HRESULT hr = SafeArrayGetUBound(psa, 1, &ubound);
+  assert(SUCCEEDED(hr));
+  hr = SafeArrayGetLBound(psa, 1, &lbound);
+  assert(SUCCEEDED(hr));
+  long *prgn;
+  hr = SafeArrayAccessData(psa, (void**)&prgn);
+  assert(SUCCEEDED(hr));
+  *pSum = 0;
+  for (long i = lbound; i <= ubound; i++)
+    *pSum += prgn[i];
+  SafeArrayUnaccessData(psa);
+  return S_OK;
+}
