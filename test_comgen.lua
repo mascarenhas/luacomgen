@@ -3,17 +3,14 @@ require "comgen"
 require "rectpointlib"
 
 local clsid_point = "{CCA7F35E-DAF3-11D0-8C53-0080C73925BA}"
-local iid_iunknown = "{00000000-0000-0000-C000-000000000046}"
-local iid_ipoint = "{CCA7F35D-DAF3-11D0-8C53-0080C73925BA}"
 local clsid_rect = "{CCA7F360-DAF3-11D0-8C53-0080C73925BA}"
-local iid_irect = "{CCA7F35F-DAF3-11D0-8C53-0080C73925BA}"
 
-local o = comgen.CreateInstance(clsid_point, iid_iunknown)
+local o = comgen.CreateInstance(clsid_point, comgen.IUnknown)
 assert(o)
 assert(o:AddRef() > 0)
 assert(o:Release() > 0)
 
-local p = o:QueryInterface(iid_ipoint)
+local p = o:QueryInterface(rectpointlib.IPoint)
 assert(p)
 assert(p:AddRef() > 0)
 assert(p:Release() > 0)
@@ -21,7 +18,7 @@ p:SetCoords(2, 3)
 local x, y = p:GetCoords()
 assert(x == 2 and y == 3)
 
-local r = comgen.CreateInstance(clsid_rect, iid_irect)
+local r = comgen.CreateInstance(clsid_rect, rectpointlib.IRect)
 assert(r)
 r:SetCoords(2, 3, 4, 5)
 assert(r:get_Volume() == 4)
@@ -115,11 +112,11 @@ assert(s == "Foo Bar")
 local s = p:RoundTrip5("Constituição")
 assert(s == "Constituição")
 
-local p1 = comgen.CreateInstance(clsid_point, iid_ipoint)
+local p1 = comgen.CreateInstance(clsid_point, rectpointlib.IPoint)
 p1:SetCoords(2, 5)
-local p2 = comgen.CreateInstance(clsid_point, iid_ipoint)
+local p2 = comgen.CreateInstance(clsid_point, rectpointlib.IPoint)
 p2:SetCoords(5, 3)
-local r = comgen.CreateInstance(clsid_rect, iid_irect)
+local r = comgen.CreateInstance(clsid_rect, rectpointlib.IRect)
 r:SetCoords4(p1, p2)
 assert(r:get_Volume() == -6)
 local p1, p2 = r:GetCoords2()
@@ -149,6 +146,6 @@ assert(arr[2] == 5)
 
 p1:SetCoords(2,3)
 p2:SetCoords(5, 7)
-p3 = comgen.CreateInstance(clsid_point, iid_ipoint)
+p3 = comgen.CreateInstance(clsid_point, rectpointlib.IPoint)
 p3:SetCoords(8, 11)
 assert(p1:Length({ type = "UNKNOWN", value = { p1, p2, p3 } }) == 10)

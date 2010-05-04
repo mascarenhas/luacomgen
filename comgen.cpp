@@ -181,6 +181,8 @@ extern "C" int luaopen_comgen(lua_State *L) {
     luaL_register(L, NULL, iunknown_methods);
     iunknown_registermeta(L);
     luaL_register(L, "comgen", comgen_functions);
+    lua_pushstring(L, IID_IUnknown_String);
+    lua_setfield(L, -2, "IUnknown");
     return 1;
   } else {
     luaL_error(L, "failed to initialize COM subsystem");

@@ -608,6 +608,8 @@ $methods[[  { "$methodname", $(modname)_$methodname },
 
 ]]
 
+static luaL_Reg $(modname)_functions[] = { { NULL, NULL } };
+
 extern "C" int luaopen_$modname(lua_State *L) {
 $interfaces[[
   comgen_fillmethods(L, IID_$(parent)_String, IID_$(ifname)_String, "$ifname", $(ifname)_methods);
@@ -615,7 +617,11 @@ $interfaces[[
 $enums[[
   comgen_registerenum(L, "$name", $(name)_fields);
 ]]
-  lua_pushboolean(L, 1);
+  luaL_register(L, "$modname", $(modname)_functions);
+$interfaces[[
+  lua_pushstring(L, IID_$(ifname)_String);
+  lua_setfield(L, -2, "$ifname");
+]]
   return 1;
 }
 
