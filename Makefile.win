@@ -12,7 +12,7 @@ comgen.dll: comgen.obj
 	link /dll comgen.obj $(LUA_LIB) $(OLE_LIB) /def:comgen.def
 
 rectpointlib.cpp:
-	$(LUA) -l luarocks.require test_generate.lua
+	$(LUA) -l luarocks.require gen_rectpoint.lua
 
 rectpointlib.obj: rectpointlib.cpp
 	cl /c /I$(LUA_INCLUDE_DIR) /Irectpoint rectpointlib.cpp
@@ -21,7 +21,7 @@ rectpointlib.dll: rectpointlib.obj
 	link /dll rectpointlib.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:rectpointlib.def
 
 opclib.cpp:
-	$(LUA) -l luarocks.require test_genopc.lua
+	$(LUA) -l luarocks.require gen_opc.lua
 
 opclib.obj: opclib.cpp
 	cl /c /I$(LUA_INCLUDE_DIR) /Iopc opclib.cpp
