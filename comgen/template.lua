@@ -583,16 +583,16 @@ static int $(modname)_$(methodname)(lua_State *L) {
   HRESULT hr;
   $ifname *p = ($ifname *)comgen_checkinterface(L, 1, IID_$(ifname)_String);
 $parameters[[  $ctype $name;
-$if{init}[[  $init{name, type}
+$if{init}[[  $init{name, type, attr}
 ]]
-$if{set}[[  $set{name, pos, type}
+$if{set}[[  $set{name, pos, type, attr}
 ]]]]
   hr = p->$cname($concat{parameters}[[$pass]]);
   if(SUCCEEDED(hr)) {
     $pushret
-$parameters[[$if{push}[[    $push{name,type}
+$parameters[[$if{push}[[    $push{name, type, attr}
 ]]
-$if{clear}[[    $clear{name,type}
+$if{clear}[[    $clear{name, type, attr}
 ]]]]    return $nresults;
   } else {
     return comgen_error(L, hr);

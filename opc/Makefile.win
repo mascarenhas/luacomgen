@@ -1,0 +1,8 @@
+
+opc.h: opc.idl
+	midl opc.idl
+
+all: opc.h
+
+clean:
+	del *.tlb *.idb *.pdb opc_?.c dlldata.c opc.h

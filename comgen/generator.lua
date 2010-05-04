@@ -29,15 +29,17 @@ local template_push_enum = cosmo.compile[[
 
 local template_init_struct = cosmo.compile[=[
   $fields[[
-    $if{init}[[$init{ var.."."..name, type }]]
+    $if{init}[[$init{ var.."."..name, type, type.attributes }]]
   ]]
 ]=]
 
 local template_set_struct = cosmo.compile[=[
+  int __pos_$stkidx;
   $fields[[
     $if{set}[[
       lua_getfield(L, $stkidx, "$name");
-      $set{ var.."."..name, -1, type }
+      __pos_$stkidx = lua_gettop(L);
+      $set{ var.."."..name, "__pos_" .. stkidx, type, type.attributes }
       lua_pop(L, 1);
     ]]
   ]]
@@ -46,15 +48,50 @@ local template_set_struct = cosmo.compile[=[
 local template_push_struct = cosmo.compile[=[
   lua_newtable(L);
   $fields[[
-    $if{push}[[$push{ var.."."..name, type }
+    $if{push}[[$push{ var.."."..name, type, type.attributes }
 	  lua_setfield(L, -2, "$name");]]
   ]]
 ]=]
 
 local template_clear_struct = cosmo.compile[=[
   $fields[[
-    $if{clear}[[$clear{ var.."."..name, type }]]
+    $if{clear}[[$clear{ var.."."..name, type, type.attributes }]]
   ]]
+]=]
+
+local template_set_array = cosmo.compile[=[
+  $if{set}[[
+    int __pos_$stkidx;
+    if(lua_objlen(L, $stkidx) != $size)
+      luaL_error(L, "array size does not match, expected: %i, actual: %i", $size, lua_objlen(L, $stkidx));
+    $var = ($ctype *)CoTaskMemAlloc($size * sizeof($ctype));
+    for(int $idx = 0; $idx < $size; $idx++) {
+      lua_rawgeti(L, $stkidx, $idx + 1);
+      __pos_$stkidx = lua_gettop(L);
+      $if{init}[[$init{ var .. "[" .. idx .. "]", type, type.attributes }]]
+      $set{ var .. "[" .. idx .. "]", "__pos_" .. stkidx, type, type.attributes }
+      lua_pop(L, 1);
+    }
+  ]]
+]=]
+
+local template_push_array = cosmo.compile[=[
+  lua_newtable(L);
+  $if{push}[[
+    for(int $idx = 0; $idx < $size; $idx++) {
+      $push{ var.."[" .. idx .. "]", type, type.attributes }
+      lua_rawseti(L, -2, $idx + 1);
+    }
+  ]]
+]=]
+
+local template_clear_array = cosmo.compile[=[
+  $if{clear}[[
+    for(int $idx = 0; $idx < $size; $idx++) {
+      $clear{ var.. "[" .. idx .. "]", type, type.attributes }
+    }
+  ]]
+  CoTaskMemFree($var);
 ]=]
 
 local template_set_safearray = cosmo.compile[=[
@@ -65,10 +102,10 @@ local template_set_safearray = cosmo.compile[=[
   hr = SafeArrayAccessData($name, (void**)&__$(name)_elems);
   if(!SUCCEEDED(hr)) luaL_error(L, "could not access SAFEARRAY $name");
   for(long i = $lbound, j = 1; j <= __$(name)_n; i++, j++) {
-    $if{elem.init}[[$(elem.init){ "__" .. name .. "_elems[i]" , elem.type }]]
+    $if{elem.init}[[$(elem.init){ "__" .. name .. "_elems[i]" , elem.type, elem.type.attributes }]]
     lua_pushinteger(L, j);
     lua_gettable(L, $stkidx);
-    $(elem.set){ "__" .. name .. "_elems[i]", -1, elem.type }
+    $(elem.set){ "__" .. name .. "_elems[i]", -1, elem.type, elem.type.attributes }
     lua_pop(L, 1);
   }
   SafeArrayUnaccessData($name);
@@ -85,14 +122,104 @@ local template_push_safearray = cosmo.compile[=[
   lua_newtable(L);
   for(long i = lbound, j = 1; i<= ubound; i++, j++) {
     lua_pushinteger(L, j);
-    $(elem.push){ "__" .. name .. "_elems[i]", elem.type }
+    $(elem.push){ "__" .. name .. "_elems[i]", elem.type, elem.type.attributes }
     lua_settable(L, -3);
   }
   SafeArrayUnaccessData($name);
 ]=]
 
+local template_set_refiid = cosmo.compile[=[
+  size_t __$(var)_size;
+  const char *__$(var)_siid = luaL_checklstring(L, $stkidx, &__$(var)_size);
+  if(__$(var)_size >= GUID_SIZE) {
+    luaL_error(L, "invalid IID: too long!");
+  }
+  wchar_t __$(var)_wsiid[GUID_SIZE];
+  mbstowcs(__$(var)_wsiid, __$(var)_siid, GUID_SIZE);
+  hr = IIDFromString(__$(var)_wsiid, &$var);
+  if(!SUCCEEDED(hr)) comgen_error(L, hr);
+]=]
+
+local template_push_refiid = cosmo.compile[=[
+  char __$(var)_p_siid[GUID_SIZE];
+  wchar_t __$(var)_p_wsiid[GUID_SIZE];
+  hr = StringFromIID(&$var, __$(var)_p_wsiid);
+  if(!SUCCEEDED(hr)) comgen_error(L, hr);
+  wcstombs(__$(var)_p_siid, __$(var)_p_wsiid, GUID_SIZE);
+  lua_pushlstring(L, __$(var)_p_siid, GUID_SIZE);
+]=]
+
+local counter
+do
+  local count = 0
+  counter = function ()
+	      count = count + 1
+	      return count
+	    end
+end
+
 local comtypes 
 comtypes = {
+  bool = {
+    vt = "INT",
+    ctype = function (type)
+	      return "BOOL"
+	    end,
+    set = function (args)
+	    return args[1] .. " = lua_toboolean(L, " .. args[2] .. ");" 
+	  end,
+    push = function (args)
+	     return "lua_pushboolean(L, " .. args[1] .. ");"
+	   end,
+  },
+  int = {
+    vt = "INT",
+    ctype = function (type)
+	      return type.name
+	    end,
+    set = function (args)
+	    return args[1] .. " = luaL_checkinteger(L, " .. args[2] .. ");" 
+	  end,
+    push = function (args)
+	     return "lua_pushinteger(L, " .. args[1] .. ");"
+	   end,
+  },
+  char = {
+    vt = "I1",
+    ctype = function (type)
+	      return type.name
+	    end,
+    set = function (args)
+	    return args[1] .. " = (char)luaL_checkinteger(L, " .. args[2] .. ");" 
+	  end,
+    push = function (args)
+	     return "lua_pushinteger(L, " .. args[1] .. ");"
+	   end,
+  },
+  ["unsigned char"] = {
+    vt = "UI1",
+    ctype = function (type)
+	      return type.name
+	    end,
+    set = function (args)
+	    return args[1] .. " = (unsigned char)luaL_checkinteger(L, " .. args[2] .. ");" 
+	  end,
+    push = function (args)
+	     return "lua_pushinteger(L, " .. args[1] .. ");"
+	   end,
+  },
+  short = {
+    vt = "I2",
+    ctype = function (type)
+	      return type.name
+	    end,
+    set = function (args)
+	    return args[1] .. " = (short)luaL_checkinteger(L, " .. args[2] .. ");" 
+	  end,
+    push = function (args)
+	     return "lua_pushinteger(L, " .. args[1] .. ");"
+	   end,
+  },
   long = {
     vt = "I4",
     ctype = function (type)
@@ -103,6 +230,30 @@ comtypes = {
 	  end,
     push = function (args)
 	     return "lua_pushinteger(L, " .. args[1] .. ");"
+	   end,
+  },
+  ["unsigned long"] = {
+    vt = "UI4",
+    ctype = function (type)
+	      return type.name
+	    end,
+    set = function (args)
+	    return args[1] .. " = (unsigned long)luaL_checkinteger(L, " .. args[2] .. ");" 
+	  end,
+    push = function (args)
+	     return "lua_pushinteger(L, " .. args[1] .. ");"
+	   end,
+  },
+  float = {
+    vt = "R4",
+    ctype = function (type)
+	      return type.name
+	    end,
+    set = function (args)
+	    return args[1] .. " = luaL_checknumber(L, " .. args[2] .. ");" 
+	  end,
+    push = function (args)
+	     return "lua_pushnumber(L, " .. args[1] .. ");"
 	   end,
   },
   double = {
@@ -127,6 +278,33 @@ comtypes = {
     push = function (args)
 	     return template_push_enum{ type = args[2], var = args[1] }
 	   end,
+  },
+  array = {
+    ctype = function (type, attr)
+	      return comtypes[type.elem_type.name].ctype(type.elem_type) .. "*"
+	    end,
+    set = function (args)
+	    local elem_type = args[3].elem_type
+	    local struct = args[1]:match("^([^%.]+%.)")
+	    return template_set_array{ stkidx = args[2], var = args[1], type = elem_type, idx = "__arr_idx_" .. counter(),
+				       set = comtypes[elem_type.name].set, size = (struct or "") .. args[4].size_is,
+				       ctype = comtypes[elem_type.name].ctype(elem_type), init = comtypes[elem_type.name].init,
+				       ["if"] = cosmo.cif }
+	  end,
+    push = function (args)
+	    local elem_type = args[2].elem_type
+	    local struct = args[1]:match("^([^%.]+%.)") or ""
+	    return template_push_array{ var = args[1], type = elem_type, idx = "__arr_idx_" .. counter(),
+					push = comtypes[elem_type.name].push, size = struct .. args[3].size_is,
+					["if"] = cosmo.cif }
+	   end,
+    clear = function (args)
+	      local elem_type = args[2].elem_type
+	      local struct = args[1]:match("^([^%.]+%.)") or ""
+	      return template_clear_array{ var = args[1], type = elem_type, idx = "__arr_idx_" .. counter(),
+					   clear = comtypes[elem_type.name].clear, size = struct .. args[3].size_is,
+					   ["if"] = cosmo.cif }
+	    end
   },
   struct = {
     ctype = function (type)
@@ -275,19 +453,60 @@ comtypes = {
 	  end,
     push = function (args)
 	     local type = args[2]
-	     return "comgen_pushinterface(L, " .. args[1] .. ", \"" .. type.iid .. "\");"
+	     local attr = args[3]
+	     if attr.iid_is then
+	       return "comgen_pushinterface(L, " .. args[1] .. ", __" .. attr.iid_is .. "_siid);"
+	     else
+	       return "comgen_pushinterface(L, " .. args[1] .. ", \"" .. type.iid .. "\");"
+	     end
 	   end,
+  },
+  refiid = {
+    ctype = function (type)
+	      return "IID"
+	    end,
+    set = function (args)
+	    return template_set_refiid{ stkidx = args[2], var = args[1] }
+	  end,
+    push = function (args)
+	     return template_push_refiid{ var = args[1] }
+	   end
+  },
+  hresult = {
+    ctype = function (type)
+	      return "HRESULT"
+	    end,
+    push = function (args)
+	     return [[
+		 char sz[1024];
+		 if(!SUCCEEDED(]] .. args[1] .. [[)) {
+		   if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ]] .. args[1] .. [[, 0, sz, 1024, 0))
+		   strcpy(sz, "Unknown error");
+                 } else strcpy(sz, "OK");
+		 lua_pushstring(L, sz);
+	     ]]
+	   end
   }
 }
 
 _M.types = {
+  bool = { name = "bool" },
   long = { name = "long" },
+  short = { name = "short" },
+  word = { name = "short" },
+  char = { name = "char" },
+  byte = { name = "unsigned char" },
+  int = { name = "int" },
+  dword = { name = "unsigned long" },
+  float = { name = "float" },
   double = { name = "double" },
   variant = { name = "variant" },
   bstring = { name = "bstring" },
   tstring = { name = "tstring" },
   wstring = { name = "wstring" },
   string = { name = "string" },
+  refiid = { name = "refiid" },
+  hresult = { name = "hresult" },
   enum = function (typedef)
 	   return { name = "enum", typedef = typedef }
 	 end,
@@ -301,12 +520,36 @@ _M.types = {
 	     t.fields = fields
 	     return t
 	   end,
+  array = function (type, attr)
+	    return { name = "array", elem_type = type, attributes = attr }
+	  end,
   interface = function (ifdesc)
 		return { name = "interface", ifname = ifdesc.name, iid = ifdesc.iid }
 	      end,
   safearray = function (vartype, lbound)
 		return { name = "safearray", lbound = lbound, elem = vartype }
 	      end
+}
+
+_M.types.vartype = {
+  name = "VARTYPE",
+  fields = {
+    { name = "VT_EMPTY", value = 0 },
+    { name = "VT_NULL", value = 1 },
+    { name = "VT_I2", value = 2 },
+    { name = "VT_I4", value = 3 },
+    { name = "VT_R4", value = 4 },
+    { name = "VT_R8", value = 5 },
+    { name = "VT_CY", value = 6 },
+    { name = "VT_DATE", value = 7 },
+    { name = "VT_BSTR", value = 8 },
+    { name = "VT_DISPATCH", value = 9 },
+    { name = "VT_ERROR", value = 10 },
+    { name = "VT_BOOL", value = 11 },
+    { name = "VT_VARIANT", value = 12 },
+    { name = "VT_UNKNOWN", value = 13 },
+    { name = "VT_UI1", value = 17 },
+  }
 }
 
 function _M.readfile(filename, s)
@@ -346,24 +589,30 @@ function _M.compile_method(method)
     mdata.cname = "set_" .. method.name
     mdata.methodname = mdata.cname
   end
+  local pos = 2
   for i, param in ipairs(method.parameters) do
     local typename = param.type.name
     local pdata = { name = param.name, pass = param.name, type = param.type,
 		    ctype = comtypes[typename].ctype(param.type),
 		    init = comtypes[typename].init,
-		    clear = comtypes[typename].clear, pos = i + 1 }
-    local attr = param.attributes or {}
+		    clear = comtypes[typename].clear, pos = pos,
+		    attr = param.attributes or {} }
+    local attr = pdata.attr
     if attr.out and not attr.retval then
       mdata.nresults = mdata.nresults + 1
       pdata.pass = "&" .. param.name
       pdata.push = comtypes[typename].push
     end
+    if attr.unique then
+      pdata.pass = "NULL"
+    end
     if attr.retval then
       mdata.nresults = mdata.nresults + 1
       pdata.pass = "&" .. param.name
-      mdata.pushret = comtypes[typename].push{ param.name, param.type }
+      mdata.pushret = comtypes[typename].push{ param.name, param.type, param.attr }
     end
-    if attr["in"] then
+    if attr["in"] and not attr.unique then
+      pos = pos + 1
       pdata.set = comtypes[typename].set
     end
     if attr.ref and not attr.out and not attr.retval then
@@ -395,7 +644,8 @@ function _M.compile(library)
   local libdata = {
     modname = library.modname,
     header = library.header or library.modname,
-    interfaces = {}, enums = library.enums or {}
+    interfaces = {}, enums = library.enums or {},
+    ["if"] = cosmo.cif
   }
   for _, interface in ipairs(library.interfaces) do
     table.insert(libdata.interfaces, _M.compile_interface(interface))
