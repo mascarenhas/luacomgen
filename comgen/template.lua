@@ -34,6 +34,13 @@ static int comgen_error(lua_State *L, HRESULT hr) {
   return 0;
 }
 
+static void comgen_pusherror(lua_State *L, HRESULT hr) {
+  char sz[1024];
+  if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, hr, 0, sz, 1024, 0))
+    strcpy(sz, "Unknown error");
+  lua_pushstring(L, sz);
+}
+
 static int comgen_isinterface(lua_State *L, int stkidx, const char *siid) {
   lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
   lua_getmetatable(L, stkidx);
@@ -146,9 +153,9 @@ static void comgen_pushwstr(lua_State *L, wchar_t *ts) {
   delete s;
 }
 
-static void comgen_clearwstr(wchar_t *ts) {
+static void comgen_clearwstr(wchar_t *ws) {
   #ifdef UNICODE
-    delete s;
+    delete ws;
   #endif
 }
 

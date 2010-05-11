@@ -14,7 +14,7 @@ local template_set_enum = cosmo.compile[[
   lua_getfield(L, -1, "$(type.typedef)");
   lua_pushvalue(L, $stkidx);
   lua_gettable(L, -2);
-  $var = ($(type.typedef))luaL_checkinteger(L, -1);
+  $var = ($(type.typedef))lua_tointeger(L, -1);
   lua_pop(L, 3);
 ]]
 
@@ -130,7 +130,7 @@ local template_push_safearray = cosmo.compile[=[
 
 local template_set_refiid = cosmo.compile[=[
   size_t __$(var)_size;
-  const char *__$(var)_siid = luaL_checklstring(L, $stkidx, &__$(var)_size);
+  const char *__$(var)_siid = lua_tolstring(L, $stkidx, &__$(var)_size);
   if(__$(var)_size >= GUID_SIZE) {
     luaL_error(L, "invalid IID: too long!");
   }
@@ -178,7 +178,7 @@ comtypes = {
 	      return type.name
 	    end,
     set = function (args)
-	    return args[1] .. " = luaL_checkinteger(L, " .. args[2] .. ");" 
+	    return args[1] .. " = lua_tointeger(L, " .. args[2] .. ");" 
 	  end,
     push = function (args)
 	     return "lua_pushinteger(L, " .. args[1] .. ");"
@@ -190,7 +190,7 @@ comtypes = {
 	      return type.name
 	    end,
     set = function (args)
-	    return args[1] .. " = (char)luaL_checkinteger(L, " .. args[2] .. ");" 
+	    return args[1] .. " = (char)lua_tointeger(L, " .. args[2] .. ");" 
 	  end,
     push = function (args)
 	     return "lua_pushinteger(L, " .. args[1] .. ");"
@@ -202,7 +202,7 @@ comtypes = {
 	      return type.name
 	    end,
     set = function (args)
-	    return args[1] .. " = (unsigned char)luaL_checkinteger(L, " .. args[2] .. ");" 
+	    return args[1] .. " = (unsigned char)lua_tointeger(L, " .. args[2] .. ");" 
 	  end,
     push = function (args)
 	     return "lua_pushinteger(L, " .. args[1] .. ");"
@@ -214,7 +214,19 @@ comtypes = {
 	      return type.name
 	    end,
     set = function (args)
-	    return args[1] .. " = (short)luaL_checkinteger(L, " .. args[2] .. ");" 
+	    return args[1] .. " = (short)lua_tointeger(L, " .. args[2] .. ");" 
+	  end,
+    push = function (args)
+	     return "lua_pushinteger(L, " .. args[1] .. ");"
+	   end,
+  },
+  ["unsigned short"] = {
+    vt = "UI2",
+    ctype = function (type)
+	      return type.name
+	    end,
+    set = function (args)
+	    return args[1] .. " = (unsigned short)lua_tointeger(L, " .. args[2] .. ");" 
 	  end,
     push = function (args)
 	     return "lua_pushinteger(L, " .. args[1] .. ");"
@@ -226,7 +238,7 @@ comtypes = {
 	      return type.name
 	    end,
     set = function (args)
-	    return args[1] .. " = luaL_checkinteger(L, " .. args[2] .. ");" 
+	    return args[1] .. " = lua_tointeger(L, " .. args[2] .. ");" 
 	  end,
     push = function (args)
 	     return "lua_pushinteger(L, " .. args[1] .. ");"
@@ -238,7 +250,7 @@ comtypes = {
 	      return type.name
 	    end,
     set = function (args)
-	    return args[1] .. " = (unsigned long)luaL_checkinteger(L, " .. args[2] .. ");" 
+	    return args[1] .. " = (unsigned long)lua_tointeger(L, " .. args[2] .. ");" 
 	  end,
     push = function (args)
 	     return "lua_pushinteger(L, " .. args[1] .. ");"
@@ -250,7 +262,7 @@ comtypes = {
 	      return type.name
 	    end,
     set = function (args)
-	    return args[1] .. " = luaL_checknumber(L, " .. args[2] .. ");" 
+	    return args[1] .. " = lua_tonumber(L, " .. args[2] .. ");" 
 	  end,
     push = function (args)
 	     return "lua_pushnumber(L, " .. args[1] .. ");"
@@ -262,7 +274,7 @@ comtypes = {
 	      return type.name
 	    end,
     set = function (args)
-	    return args[1] .. " = luaL_checknumber(L, " .. args[2] .. ");" 
+	    return args[1] .. " = lua_tonumber(L, " .. args[2] .. ");" 
 	  end,
     push = function (args)
 	     return "lua_pushnumber(L, " .. args[1] .. ");"
@@ -281,14 +293,14 @@ comtypes = {
   },
   array = {
     ctype = function (type, attr)
-	      return comtypes[type.elem_type.name].ctype(type.elem_type) .. "*"
+	      return comtypes[type.elem_type.name].ctype(type.elem_type, attr) .. "*"
 	    end,
     set = function (args)
 	    local elem_type = args[3].elem_type
 	    local struct = args[1]:match("^([^%.]+%.)")
 	    return template_set_array{ stkidx = args[2], var = args[1], type = elem_type, idx = "__arr_idx_" .. counter(),
 				       set = comtypes[elem_type.name].set, size = (struct or "") .. args[4].size_is,
-				       ctype = comtypes[elem_type.name].ctype(elem_type), init = comtypes[elem_type.name].init,
+				       ctype = comtypes[elem_type.name].ctype(elem_type, args[4]), init = comtypes[elem_type.name].init,
 				       ["if"] = cosmo.cif }
 	  end,
     push = function (args)
@@ -377,8 +389,12 @@ comtypes = {
 	    end,
   },
   tstring = {
-    ctype = function (type)
-	      return "LPTSTR"
+    ctype = function (type, attr)
+	      if attr["in"] and not attr.out and not attr.ref then
+		return "LPCTSTR"
+	      else
+		return "LPTSTR"
+	      end
 	    end,
     set = function (args)
 	    return args[1] .. " = comgen_totstr(L, " .. args[2] .. ");"
@@ -387,12 +403,16 @@ comtypes = {
 	     return "comgen_pushtstr(L, " .. args[1] .. ");"
 	   end,
     clear = function (args)
-	      return "comgen_cleartstr(" .. args[1] .. ");"
+	      return "comgen_cleartstr((TCHAR*)" .. args[1] .. ");"
 	    end,
   },
   wstring = {
-    ctype = function (type)
-	      return "LPWSTR"
+    ctype = function (type, attr)
+	      if attr["in"] and not attr.out and not attr.ref then
+		return "LPCWSTR"
+	      else
+		return "LPWSTR"
+	      end
 	    end,
     set = function (args)
 	    return args[1] .. " = comgen_towstr(L, " .. args[2] .. ");"
@@ -401,7 +421,7 @@ comtypes = {
 	     return "comgen_pushwstr(L, " .. args[1] .. ");"
 	   end,
     clear = function (args)
-	      return "comgen_clearwstr(" .. args[1] .. ");"
+	      return "comgen_clearwstr((wchar_t *)" .. args[1] .. ");"
 	    end,
   },
   safearray = {
@@ -413,7 +433,7 @@ comtypes = {
 					   lbound = args[3].lbound or 0, 
 					   elem = { 
 					     set = comtypes[args[3].elem.name].set, 
-					     ctype = comtypes[args[3].elem.name].ctype(args[3].elem),
+					     ctype = comtypes[args[3].elem.name].ctype(args[3].elem, args[3].elem.attr or {}),
 					     init = comtypes[args[3].elem.name].init,
 					     type = args[3].elem,
 					     vt = comtypes[args[3].elem.name].vt
@@ -422,7 +442,7 @@ comtypes = {
     push = function (args)
 	     return template_push_safearray{ name = args[1],
 					    elem = { 
-					      ctype = comtypes[args[2].elem.name].ctype(args[2].elem),
+					      ctype = comtypes[args[2].elem.name].ctype(args[2].elem, args[2].elem.attr or {}),
 					      push = comtypes[args[2].elem.name].push,
 					      type = args[2].elem,
 					    }, ["if"] = cosmo.cif }
@@ -432,11 +452,15 @@ comtypes = {
 	    end
   },
   string = {
-    ctype = function (type)
-	      return "LPSTR"
+    ctype = function (type, attr)
+	      if attr["in"] and not attr.out and not attr.ref then
+		return "LPCSTR"
+	      else
+		return "LPSTR"
+	      end
 	    end,
     set = function (args)
-	    return args[1] .. " = (char*)lua_tostring(L, " .. args[2] .. ");"
+	    return args[1] .. " = lua_tostring(L, " .. args[2] .. ");"
 	  end,
     push = function (args)
 	     return "lua_pushstring(L, " .. args[1] .. ");"
@@ -493,7 +517,7 @@ _M.types = {
   bool = { name = "bool" },
   long = { name = "long" },
   short = { name = "short" },
-  word = { name = "short" },
+  word = { name = "unsigned short" },
   char = { name = "char" },
   byte = { name = "unsigned char" },
   int = { name = "int" },
@@ -593,7 +617,7 @@ function _M.compile_method(method)
   for i, param in ipairs(method.parameters) do
     local typename = param.type.name
     local pdata = { name = param.name, pass = param.name, type = param.type,
-		    ctype = comtypes[typename].ctype(param.type),
+		    ctype = comtypes[typename].ctype(param.type, param.attributes or {}),
 		    init = comtypes[typename].init,
 		    clear = comtypes[typename].clear, pos = pos,
 		    attr = param.attributes or {} }

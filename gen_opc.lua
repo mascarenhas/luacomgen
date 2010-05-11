@@ -46,6 +46,16 @@ local OPCITEMRESULT = types.struct("OPCITEMRESULT", {
   { type = types.array(types.byte,  { size_is = "dwBlobSize" }), name = "pBlob" },
 })
 
+local OPCITEMVQT = types.struct("OPCITEMVQT", {
+  { type = types.variant, name = "vDataValue" },
+  { type = types.bool, name = "bQualitySpecified" },
+  { type = types.word, name = "wQuality" },
+  { type = types.word, name = "wReserved" },
+  { type = types.bool, name = "bTimeStampSpecified" },
+  { type = types.dword, name = "dwReserved" },
+  { type = FILETIME, name = "ftTimeStamp" },
+})
+
 local IOPCServer = {
   name = "IOPCServer",
   iid = "{39C13A4D-011E-11D0-9675-0020AFD8ADB3}",
@@ -129,10 +139,39 @@ local IOPCSyncIO = {
   }
 }
 
+local IOPCItemIO = {
+  name = "IOPCItemIO",
+  iid = "{85C0B427-2893-4cbc-BD78-E5FC5146F08F}",
+  parent = IUnknown,
+  methods = {
+    {
+      name = "Read",
+      parameters = {
+	{ type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
+	{ type = types.array(types.wstring), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pszItemIDs" },
+	{ type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pdwMaxAge" },
+	{ type = types.array(types.variant), attributes = { out = true, size_is = "dwCount" }, name = "ppvValues" },
+	{ type = types.array(types.word), attributes = { out = true, size_is = "dwCount" }, name = "ppwQualities" },
+	{ type = types.array(FILETIME), attributes = { out = true, size_is = "dwCount" }, name = "ppftTimeStamps" },
+	{ type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
+      }
+    },
+    {
+      name = "WriteVQT",
+      parameters = {
+	{ type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
+	{ type = types.array(types.wstring), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pszItemIDs" },
+	{ type = types.array(OPCITEMVQT), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pItemVQT" },
+	{ type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
+      }
+    }
+  }
+}
+
 local opcda = {
   modname = "opclib",
-  header = "opc",
-  interfaces = { IOPCServer, IOPCSyncIO, IOPCItemMgt },
+  header = "opcda",
+  interfaces = { IOPCServer, IOPCSyncIO, IOPCItemMgt, IOPCItemIO },
   enums = { OPCDATASOURCE, types.vartype }
 }
 

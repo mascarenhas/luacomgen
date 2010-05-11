@@ -92,8 +92,8 @@ STDMETHODIMP CPoint::GetType3(/*[out, retval]*/ LPTSTR *t) {
   return S_OK;
 }
 
-STDMETHODIMP CPoint::RoundTrip3(LPTSTR s1, /*[out, retval]*/ LPTSTR *s2) {
-  *s2 = s1;
+STDMETHODIMP CPoint::RoundTrip3(LPCTSTR s1, /*[out, retval]*/ LPTSTR *s2) {
+  *s2 = (LPTSTR)s1;
   return S_OK;
 }
 
@@ -102,8 +102,8 @@ STDMETHODIMP CPoint::GetType4(/*[out, retval]*/ LPWSTR *t) {
   return S_OK;
 }
 
-STDMETHODIMP CPoint::RoundTrip4(LPWSTR s1, /*[out, retval]*/ LPWSTR *s2) {
-  *s2 = s1;
+STDMETHODIMP CPoint::RoundTrip4(LPCWSTR s1, /*[out, retval]*/ LPWSTR *s2) {
+  *s2 = (LPWSTR)s1;
   return S_OK;
 }
 
@@ -112,8 +112,8 @@ STDMETHODIMP CPoint::GetType5(/*[out, retval]*/ LPSTR *t) {
   return S_OK;
 }
 
-STDMETHODIMP CPoint::RoundTrip5(LPSTR s1, /*[out, retval]*/ LPSTR *s2) {
-  *s2 = s1;
+STDMETHODIMP CPoint::RoundTrip5(LPCSTR s1, /*[out, retval]*/ LPSTR *s2) {
+  *s2 = (LPSTR)s1;
   return S_OK;
 }
 

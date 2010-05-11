@@ -36,11 +36,11 @@ typedef struct {
 	        HRESULT GetType2([out, retval] BSTR *t);
 	        HRESULT RoundTrip2([in] BSTR s1, [out, retval] BSTR *s2);
 	        HRESULT GetType3([out, retval] LPTSTR *t);
-	        HRESULT RoundTrip3([in] LPTSTR s1, [out, retval] LPTSTR *s2);
+	        HRESULT RoundTrip3([in] LPCTSTR s1, [out, retval] LPTSTR *s2);
 	        HRESULT GetType4([out, retval] LPWSTR *t);
-	        HRESULT RoundTrip4([in] LPWSTR s1, [out, retval] LPWSTR *s2);
+	        HRESULT RoundTrip4([in] LPCWSTR s1, [out, retval] LPWSTR *s2);
 	        HRESULT GetType5([out, retval] LPSTR *t);
-	        HRESULT RoundTrip5([in] LPSTR s1, [out, retval] LPSTR *s2);
+	        HRESULT RoundTrip5([in] LPCSTR s1, [out, retval] LPSTR *s2);
     	        HRESULT Sum([in] SAFEARRAY(long) *ppsa, [out, retval] long *psum);
 	        HRESULT GetCoordsArr([out, retval] SAFEARRAY(long) *ppsa);
     	        HRESULT Sum2([in] VARIANT var, [out, retval] long *psum);

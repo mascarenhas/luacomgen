@@ -36,11 +36,11 @@ public:
 	STDMETHOD(GetType2)(/*[out, retval]*/ BSTR *t);
 	STDMETHOD(RoundTrip2)(BSTR s1, /*[out, retval]*/ BSTR *s2);
 	STDMETHOD(GetType3)(/*[out, retval]*/ LPTSTR *t);
-	STDMETHOD(RoundTrip3)(LPTSTR s1, /*[out, retval]*/ LPTSTR *s2);
+	STDMETHOD(RoundTrip3)(LPCTSTR s1, /*[out, retval]*/ LPTSTR *s2);
 	STDMETHOD(GetType4)(/*[out, retval]*/ LPWSTR *t);
-	STDMETHOD(RoundTrip4)(LPWSTR s1, /*[out, retval]*/ LPWSTR *s2);
+	STDMETHOD(RoundTrip4)(LPCWSTR s1, /*[out, retval]*/ LPWSTR *s2);
 	STDMETHOD(GetType5)(/*[out, retval]*/ LPSTR *t);
-	STDMETHOD(RoundTrip5)(LPSTR s1, /*[out, retval]*/ LPSTR *s2);
+	STDMETHOD(RoundTrip5)(LPCSTR s1, /*[out, retval]*/ LPSTR *s2);
 	STDMETHOD(Sum)(SAFEARRAY **ppsa, /*[out, retval]*/ long *pSum);
 	STDMETHOD(GetCoordsArr)(SAFEARRAY **ppsa);
 	STDMETHOD(Sum2)(VARIANT var, /*[out, retval]*/ long *pSum);

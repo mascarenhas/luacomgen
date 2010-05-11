@@ -1,8 +1,8 @@
 
-opc.h: opc.idl
-	midl opc.idl
+opcda.h: opcda.idl
+	midl opcda.idl
 
-all: opc.h
+all: opcda.h
 
 clean:
-	del *.tlb *.idb *.pdb opc_?.c dlldata.c opc.h
+	del *.tlb *.idb *.pdb opcda_?.c dlldata.c opcda.h
