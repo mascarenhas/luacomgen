@@ -28,8 +28,10 @@ typedef struct {
 
 static int comgen_error(lua_State *L, HRESULT hr) {
   char sz[1024];
-  if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, hr, 0, sz, 1024, 0))
-    strcpy(sz, "Unknown error");
+  if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, hr, 0, sz, 1024, 0)) {
+    lua_pushinteger(L, hr);
+    lua_error(L);
+  }
   luaL_error(L, sz);
   return 0;
 }
@@ -37,8 +39,9 @@ static int comgen_error(lua_State *L, HRESULT hr) {
 static void comgen_pusherror(lua_State *L, HRESULT hr) {
   char sz[1024];
   if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, hr, 0, sz, 1024, 0))
-    strcpy(sz, "Unknown error");
-  lua_pushstring(L, sz);
+    lua_pushinteger(L, hr);
+  else
+    lua_pushstring(L, sz);
 }
 
 static int comgen_isinterface(lua_State *L, int stkidx, const char *siid) {
@@ -557,9 +560,9 @@ static void comgen_push_variant(lua_State *L, VARIANT *var) {
     case VT_ERROR: {
       char sz[1024];
       if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ISREF(scode), 0, sz, 1024, 0))
-	lua_pushstring(L, sz);
+        lua_pushinteger(L, ISREF(scode));
       else
-	lua_pushstring(L, "Unknown error");
+	lua_pushstring(L, sz);
       break;
     }
     case VT_BOOL: {

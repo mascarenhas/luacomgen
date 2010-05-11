@@ -500,14 +500,18 @@ comtypes = {
     ctype = function (type)
 	      return "HRESULT"
 	    end,
+    set = function (args)
+	    return args[1] .. " = lua_tointeger(L, " .. args[2] .. ");" 
+	  end,
     push = function (args)
 	     return [[
-		 char sz[1024];
 		 if(!SUCCEEDED(]] .. args[1] .. [[)) {
+		   char sz[1024];
 		   if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ]] .. args[1] .. [[, 0, sz, 1024, 0))
-		   strcpy(sz, "Unknown error");
-                 } else strcpy(sz, "OK");
-		 lua_pushstring(L, sz);
+		     lua_pushinteger(L, ]] .. args[1] .. [[);
+		   else
+		     lua_pushstring(L, sz);		   
+                 } else lua_pushstring(L, "OK");
 	     ]]
 	   end
   }

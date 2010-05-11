@@ -83,6 +83,14 @@ local IOPCServer = {
 	{ type = types.dword, attributes = { ["in"] = true }, name = "hServerGroup" },
 	{ type = types.bool, attributes = { ["in"] = true }, name = "bForce" },
       }
+    },
+    {
+      name = "GetErrorString",
+      parameters = {
+	{ type = types.hresult, attributes = { ["in"] = true }, name = "dwError" },
+	{ type = types.dword, attributes = { ["in"] = true }, name = "dwLocale" },
+	{ type = types.wstring, attributes = { out = true }, name = "ppString" }
+      }
     }
   }
 }
