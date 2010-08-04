@@ -1,4 +1,5 @@
 
+#define _WIN32_DCOM
 #include <stdlib.h>
 #include <objbase.h>
 #include <unknwn.h>
@@ -120,6 +121,7 @@ static void iunknown_registermeta(lua_State *L) {
 
 static int comgen_createinstance(lua_State *L) {
   size_t sizeclsid;
+  int nargs = lua_gettop(L);
   const char *sclsid = luaL_checklstring(L, 1, &sizeclsid);
   if(sizeclsid >= GUID_SIZE) {
     luaL_error(L, "invalid CLSID: too long!");
@@ -141,9 +143,29 @@ static int comgen_createinstance(lua_State *L) {
     hr = IIDFromString(wsiid, &iid);
     if(SUCCEEDED(hr)) {
       IUnknown *ppv;
-      HRESULT hr = CoCreateInstance(clsid, 0, CLSCTX_ALL, iid, (void**)&ppv);
-      if(SUCCEEDED(hr)) {
+      MULTI_QI qi[1];
+      HRESULT hr;
+      qi[0].pIID = &iid;
+      qi[0].pItf = NULL;
+      qi[0].hr = 0;
+      if(nargs == 2 || lua_isnil(L, 3)) {
+	hr = CoCreateInstanceEx(clsid, 0, CLSCTX_ALL, 0 /*server*/, 1, qi);
+      } else {
+	COSERVERINFO si;
+	size_t sizehost;
+	const char *host = luaL_checklstring(L, 3, &sizehost);
+	wchar_t *wshost = new wchar_t[sizehost];
+	mbstowcs(wshost, host, sizehost);
+	si.dwReserved1 = 0;
+	si.pwszName = wshost;
+	si.pAuthInfo = NULL;
+	si.dwReserved2 = 0;
+	hr = CoCreateInstanceEx(clsid, 0, CLSCTX_ALL, &si, 1, qi);
+	delete wshost;
+      }
+      if(SUCCEEDED(hr) && SUCCEEDED(qi[0].hr)) {
 	void **ud = (void **)lua_newuserdata(L, sizeof(void *));
+	ppv = qi[0].pItf;
 	lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
 	lua_getfield(L, -1, siid);
 	if(lua_isnil(L, -1)) {
@@ -155,7 +177,7 @@ static int comgen_createinstance(lua_State *L) {
 	*ud = ppv;
 	return 1;
       } else {
-	return comgen_error(L, hr);
+	return SUCCEEDED(hr) ? comgen_error(L, qi[0].hr) : comgen_error(L, hr);
       }
     } else {
       return comgen_error(L, hr);
