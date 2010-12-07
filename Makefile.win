@@ -24,7 +24,7 @@ opclib.cpp:
 	$(LUA) -l luarocks.require gen_opc.lua
 
 opclib.obj: opclib.cpp
-	cl /c /I$(LUA_INCLUDE_DIR) /Iopc opclib.cpp
+	cl /c /W3 /I$(LUA_INCLUDE_DIR) /Iopc opclib.cpp
 
 opclib.dll: opclib.obj
 	link /dll opclib.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:opclib.def

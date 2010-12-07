@@ -51,14 +51,14 @@ static int comgen_isinterface(lua_State *L, int stkidx, const char *siid) {
     lua_gettable(L, -2);
     if(!lua_isnil(L, -1)) {
       if(siid) {
-	lua_pushstring(L, siid);
-	if(lua_rawequal(L, -1, -2)) {
-	  lua_pop(L, 3);
-	  return 1;
-	}
+        lua_pushstring(L, siid);
+        if(lua_rawequal(L, -1, -2)) {
+          lua_pop(L, 3);
+          return 1;
+        }
       } else {
-	lua_pop(L, 2);
-	return 1;
+        lua_pop(L, 2);
+        return 1;
       }
     }
   }
@@ -100,8 +100,8 @@ static void comgen_registermeta(lua_State *L, const char *iid_string, const char
   lua_pop(L, 1);
 }
 
-static void comgen_fillmethods(lua_State *L, const char *iid_parent_string, 
-			       const char *iid_string, const char *ifname, const luaL_Reg *methods) {
+static void comgen_fillmethods(lua_State *L, const char *iid_parent_string,
+                               const char *iid_string, const char *ifname, const luaL_Reg *methods) {
   lua_newtable(L);
   int i = lua_gettop(L);
   lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
@@ -207,7 +207,7 @@ typedef struct {
   const char *name;
 } COMGEN_VARTYPE;
 
-static COMGEN_VARTYPE comgen_vartypes[] = { 
+static COMGEN_VARTYPE comgen_vartypes[] = {
   VT(EMPTY),
   VT(NULL),
   VT(UI1),
@@ -246,8 +246,8 @@ static VARTYPE comgen_name2vt(lua_State *L, const char *name) {
 static void comgen_checktype(lua_State *L, int origidx, int validx, int t) {
   int rt = lua_type(L, validx);
   if(rt != t)
-    luaL_error(L, "argument %i needs to be a %s but is a %s", 
-	       origidx, lua_typename(L, t), lua_typename(L, rt));
+    luaL_error(L, "argument %i needs to be a %s but is a %s",
+               origidx, lua_typename(L, t), lua_typename(L, rt));
 }
 
 static void *comgen_tointerface(lua_State *L, int stkidx, const char *siid) {
@@ -290,14 +290,14 @@ static void comgen_clear_safearray(SAFEARRAY *parr);
 
 #define FILL_SAFEARRAY(T, tof)   { \
                                     T *v = (T *)data; \
-				    for(long i = 0, j = 1; i < n; i++, j++) { \
-				      lua_pushinteger(L, j); \
-				      lua_gettable(L, -2); \
-				      v[i] = tof(L, lua_gettop(L)); \
-				      lua_pop(L, 1); \
-				    } \
-				    break; \
-				  }
+                                    for(size_t i = 0, j = 1; i < n; i++, j++) { \
+                                      lua_pushinteger(L, j); \
+                                      lua_gettable(L, -2); \
+                                      v[i] = (T)tof(L, lua_gettop(L)); \
+                                      lua_pop(L, 1); \
+                                    } \
+                                    break; \
+                                  }
 
 #define comgen_toidispatch(L, i)   (IDispatch *)comgen_tointerface(L, i, IID_IDispatch_String)
 #define comgen_toiunknown(L, i)   (IUnknown *)comgen_tointerface(L, i, IID_IUnknown_String)
@@ -338,19 +338,19 @@ static void comgen_create_safearray(lua_State *L, VARTYPE vt, VARIANT *var) {
       break;
     }
     case VT_BOOL: FILL_SAFEARRAY(VARIANT_BOOL, comgen_tovarbool)
-    case VT_VARIANT: { 
+    case VT_VARIANT: {
       VARIANT **v = (VARIANT **)data;
-      for(long i = 0, j = 1; i < n; i++, j++) {
-	lua_pushinteger(L, j);
-	lua_gettable(L, -2);
-	comgen_set_variant(L, lua_gettop(L), v[i]);
-      } 
+      for(size_t i = 0, j = 1; i < n; i++, j++) {
+        lua_pushinteger(L, j);
+        lua_gettable(L, -2);
+        comgen_set_variant(L, lua_gettop(L), v[i]);
+      }
       break;
     }
     case VT_UNKNOWN: FILL_SAFEARRAY(IUnknown*, comgen_toiunknown)
     case VT_DECIMAL: {
       comgen_clear_safearray(var->parray);
-      luaL_error(L, "VARIANT type DECIMAL not supported"); 
+      luaL_error(L, "VARIANT type DECIMAL not supported");
       break;
     }
     default: {
@@ -384,7 +384,7 @@ static void comgen_converttable(lua_State *L, int stkidx, VARIANT *var) {
     case VT_I4: ISREF_S(lVal, lua_tointeger(L, -1)); break;
     case VT_I8: ISREF_S(llVal, lua_tointeger(L, -1)); break;
     case VT_INT: ISREF_S(intVal, lua_tointeger(L, -1)); break;
-    case VT_R4: ISREF_S(fltVal, lua_tonumber(L, -1)); break;
+    case VT_R4: ISREF_S(fltVal, (FLOAT)lua_tonumber(L, -1)); break;
     case VT_R8: ISREF_S(dblVal, lua_tonumber(L, -1)); break;
     case VT_CY: luaL_error(L, "VARIANT type CY not supported"); break;
     case VT_DATE: ISREF_S(date, lua_tonumber(L, -1)); break;
@@ -438,9 +438,9 @@ static void comgen_set_variant(lua_State *L, int stkidx, VARIANT *var) {
       break;
     case LUA_TUSERDATA: {
       if(comgen_isinterface(L, stkidx, 0)) {
-	var->vt = VT_UNKNOWN;
-	var->punkVal = (IUnknown *)comgen_tointerface(L, stkidx, 0);
-	break;
+        var->vt = VT_UNKNOWN;
+        var->punkVal = (IUnknown *)comgen_tointerface(L, stkidx, 0);
+        break;
       }
     }
     default:
@@ -455,24 +455,32 @@ static void comgen_clear_safearray(SAFEARRAY *parr) {
 
 #define PUSH_SAFEARRAY(T, pushf)  { \
                                     T *v = (T *)data; \
-				    lua_newtable(L); \
-				    for(long i = lbound, j = 1; i <= ubound; i++, j++) { \
-				      lua_pushinteger(L, j); \
-				      pushf(L, v[i]); \
-				      lua_settable(L, -3); \
-				    } \
-				    break; \
-				  }
+                                    lua_newtable(L); \
+                                    for(long i = lbound, j = 1; i <= ubound; i++, j++) { \
+                                      lua_pushinteger(L, j); \
+                                      pushf(L, v[i]); \
+                                      lua_settable(L, -3); \
+                                    } \
+                                    break; \
+                                  }
 
 #define comgen_pushidispatch(L, id)  comgen_pushinterface(L, id, IID_IDispatch_String)
 #define comgen_pushiunknown(L, id)  comgen_pushinterface(L, id, IID_IUnknown_String)
 #define comgen_pushvarbool(L, bv)   bv == -1 ? lua_pushboolean(L, 1) : lua_pushboolean(L, 0)
 
+static void comgen_pushulonglong(lua_State *L, ULONGLONG n) {
+  lua_pushinteger(L, (lua_Integer)n);
+}
+
+static void comgen_pushlonglong(lua_State *L, LONGLONG n) {
+  lua_pushinteger(L, (lua_Integer)n);
+}
+
 static void comgen_push_variant(lua_State *L, VARIANT *var);
 
 static void comgen_push_safearray(lua_State *L, VARTYPE vt, SAFEARRAY *parr) {
-  if(SafeArrayGetDim(parr) != 1) { 
-    luaL_error(L, "safearray must be a vector"); 
+  if(SafeArrayGetDim(parr) != 1) {
+    luaL_error(L, "safearray must be a vector");
     return;
   }
   char *data;
@@ -487,18 +495,18 @@ static void comgen_push_safearray(lua_State *L, VARTYPE vt, SAFEARRAY *parr) {
     case VT_UI1: PUSH_SAFEARRAY(BYTE, lua_pushinteger)
     case VT_UI2: PUSH_SAFEARRAY(USHORT, lua_pushinteger)
     case VT_UI4: PUSH_SAFEARRAY(ULONG, lua_pushinteger)
-    case VT_UI8: PUSH_SAFEARRAY(ULONGLONG, lua_pushinteger)
+    case VT_UI8: PUSH_SAFEARRAY(ULONGLONG, comgen_pushulonglong)
     case VT_UINT: PUSH_SAFEARRAY(UINT, lua_pushinteger)
     case VT_I1: PUSH_SAFEARRAY(CHAR, lua_pushinteger)
     case VT_I2: PUSH_SAFEARRAY(SHORT, lua_pushinteger)
     case VT_I4: PUSH_SAFEARRAY(LONG, lua_pushinteger)
-    case VT_I8: PUSH_SAFEARRAY(LONGLONG, lua_pushinteger)
+    case VT_I8: PUSH_SAFEARRAY(LONGLONG, comgen_pushlonglong)
     case VT_INT: PUSH_SAFEARRAY(INT, lua_pushinteger)
     case VT_R4: PUSH_SAFEARRAY(FLOAT, lua_pushnumber)
     case VT_R8: PUSH_SAFEARRAY(DOUBLE, lua_pushnumber)
     case VT_CY: {
       comgen_clear_safearray(parr);
-      luaL_error(L, "VARIANT type CY not supported"); 
+      luaL_error(L, "VARIANT type CY not supported");
       break;
     }
     case VT_DATE: PUSH_SAFEARRAY(DATE, lua_pushnumber)
@@ -506,19 +514,19 @@ static void comgen_push_safearray(lua_State *L, VARTYPE vt, SAFEARRAY *parr) {
     case VT_DISPATCH: PUSH_SAFEARRAY(IDispatch*, comgen_pushidispatch)
     case VT_ERROR: {
       comgen_clear_safearray(parr);
-      luaL_error(L, "VARIANT type ERROR not supported"); 
+      luaL_error(L, "VARIANT type ERROR not supported");
       break;
     }
     case VT_BOOL: PUSH_SAFEARRAY(VARIANT_BOOL, comgen_pushvarbool)
     case VT_VARIANT: PUSH_SAFEARRAY(VARIANT*, comgen_push_variant)
     case VT_UNKNOWN: PUSH_SAFEARRAY(IUnknown*, comgen_pushiunknown)
     case VT_DECIMAL: {
-      comgen_clear_safearray(parr); 
-      luaL_error(L, "VARIANT type DECIMAL not supported"); 
+      comgen_clear_safearray(parr);
+      luaL_error(L, "VARIANT type DECIMAL not supported");
       break;
     }
     default: {
-      comgen_clear_safearray(parr); 
+      comgen_clear_safearray(parr);
       luaL_error(L, "unsupported VARIANT type %i", vt);
     }
   }
@@ -554,7 +562,7 @@ static void comgen_push_variant(lua_State *L, VARIANT *var) {
       comgen_pushbstr(L, ISREF(bstrVal));
       break;
     }
-    case VT_DISPATCH: 
+    case VT_DISPATCH:
       comgen_pushinterface(L, ISREF(pdispVal), IID_IDispatch_String);
       break;
     case VT_ERROR: {
@@ -562,7 +570,7 @@ static void comgen_push_variant(lua_State *L, VARIANT *var) {
       if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ISREF(scode), 0, sz, 1024, 0))
         lua_pushinteger(L, ISREF(scode));
       else
-	lua_pushstring(L, sz);
+        lua_pushstring(L, sz);
       break;
     }
     case VT_BOOL: {
@@ -570,7 +578,7 @@ static void comgen_push_variant(lua_State *L, VARIANT *var) {
       break;
     }
     case VT_VARIANT: comgen_push_variant(L, var->pvarVal); break;
-    case VT_UNKNOWN: 
+    case VT_UNKNOWN:
       comgen_pushinterface(L, ISREF(punkVal), IID_IUnknown_String);
       break;
     case VT_DECIMAL: luaL_error(L, "VARIANT type DECIMAL not supported"); break;
@@ -593,6 +601,8 @@ static int $(modname)_$(methodname)(lua_State *L) {
   HRESULT hr;
   $ifname *p = ($ifname *)comgen_checkinterface(L, 1, IID_$(ifname)_String);
 $parameters[[  $ctype $name;
+$if{pass == 'NULL'}[[ $name = NULL;
+]]
 $if{init}[[  $init{name, type, attr}
 ]]
 $if{set}[[  $set{name, pos, type, attr}

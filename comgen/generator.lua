@@ -49,7 +49,7 @@ local template_push_struct = cosmo.compile[=[
   lua_newtable(L);
   $fields[[
     $if{push}[[$push{ var.."."..name, type, type.attributes }
-	  lua_setfield(L, -2, "$name");]]
+          lua_setfield(L, -2, "$name");]]
   ]]
 ]=]
 
@@ -65,7 +65,7 @@ local template_set_array = cosmo.compile[=[
     if(lua_objlen(L, $stkidx) != $size)
       luaL_error(L, "array size does not match, expected: %i, actual: %i", $size, lua_objlen(L, $stkidx));
     $var = ($ctype *)CoTaskMemAlloc($size * sizeof($ctype));
-    for(int $idx = 0; $idx < $size; $idx++) {
+    for(size_t $idx = 0; $idx < $size; $idx++) {
       lua_rawgeti(L, $stkidx, $idx + 1);
       __pos_$stkidx = lua_gettop(L);
       $if{init}[[$init{ var .. "[" .. idx .. "]", type, type.attributes }]]
@@ -78,7 +78,7 @@ local template_set_array = cosmo.compile[=[
 local template_push_array = cosmo.compile[=[
   lua_newtable(L);
   $if{push}[[
-    for(int $idx = 0; $idx < $size; $idx++) {
+    for(size_t $idx = 0; $idx < $size; $idx++) {
       $push{ var.."[" .. idx .. "]", type, type.attributes }
       lua_rawseti(L, -2, $idx + 1);
     }
@@ -87,7 +87,7 @@ local template_push_array = cosmo.compile[=[
 
 local template_clear_array = cosmo.compile[=[
   $if{clear}[[
-    for(int $idx = 0; $idx < $size; $idx++) {
+    for(size_t $idx = 0; $idx < $size; $idx++) {
       $clear{ var.. "[" .. idx .. "]", type, type.attributes }
     }
   ]]
@@ -153,367 +153,367 @@ local counter
 do
   local count = 0
   counter = function ()
-	      count = count + 1
-	      return count
-	    end
+              count = count + 1
+              return count
+            end
 end
 
-local comtypes 
+local comtypes
 comtypes = {
   bool = {
     vt = "INT",
     ctype = function (type)
-	      return "BOOL"
-	    end,
+              return "BOOL"
+            end,
     set = function (args)
-	    return args[1] .. " = lua_toboolean(L, " .. args[2] .. ");" 
-	  end,
+            return args[1] .. " = lua_toboolean(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "lua_pushboolean(L, " .. args[1] .. ");"
-	   end,
+             return "lua_pushboolean(L, " .. args[1] .. ");"
+           end,
   },
   int = {
     vt = "INT",
     ctype = function (type)
-	      return type.name
-	    end,
+              return type.name
+            end,
     set = function (args)
-	    return args[1] .. " = lua_tointeger(L, " .. args[2] .. ");" 
-	  end,
+            return args[1] .. " = lua_tointeger(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "lua_pushinteger(L, " .. args[1] .. ");"
-	   end,
+             return "lua_pushinteger(L, " .. args[1] .. ");"
+           end,
   },
   char = {
     vt = "I1",
     ctype = function (type)
-	      return type.name
-	    end,
+              return type.name
+            end,
     set = function (args)
-	    return args[1] .. " = (char)lua_tointeger(L, " .. args[2] .. ");" 
-	  end,
+            return args[1] .. " = (char)lua_tointeger(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "lua_pushinteger(L, " .. args[1] .. ");"
-	   end,
+             return "lua_pushinteger(L, " .. args[1] .. ");"
+           end,
   },
   ["unsigned char"] = {
     vt = "UI1",
     ctype = function (type)
-	      return type.name
-	    end,
+              return type.name
+            end,
     set = function (args)
-	    return args[1] .. " = (unsigned char)lua_tointeger(L, " .. args[2] .. ");" 
-	  end,
+            return args[1] .. " = (unsigned char)lua_tointeger(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "lua_pushinteger(L, " .. args[1] .. ");"
-	   end,
+             return "lua_pushinteger(L, " .. args[1] .. ");"
+           end,
   },
   short = {
     vt = "I2",
     ctype = function (type)
-	      return type.name
-	    end,
+              return type.name
+            end,
     set = function (args)
-	    return args[1] .. " = (short)lua_tointeger(L, " .. args[2] .. ");" 
-	  end,
+            return args[1] .. " = (short)lua_tointeger(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "lua_pushinteger(L, " .. args[1] .. ");"
-	   end,
+             return "lua_pushinteger(L, " .. args[1] .. ");"
+           end,
   },
   ["unsigned short"] = {
     vt = "UI2",
     ctype = function (type)
-	      return type.name
-	    end,
+              return type.name
+            end,
     set = function (args)
-	    return args[1] .. " = (unsigned short)lua_tointeger(L, " .. args[2] .. ");" 
-	  end,
+            return args[1] .. " = (unsigned short)lua_tointeger(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "lua_pushinteger(L, " .. args[1] .. ");"
-	   end,
+             return "lua_pushinteger(L, " .. args[1] .. ");"
+           end,
   },
   long = {
     vt = "I4",
     ctype = function (type)
-	      return type.name
-	    end,
+              return type.name
+            end,
     set = function (args)
-	    return args[1] .. " = lua_tointeger(L, " .. args[2] .. ");" 
-	  end,
+            return args[1] .. " = lua_tointeger(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "lua_pushinteger(L, " .. args[1] .. ");"
-	   end,
+             return "lua_pushinteger(L, " .. args[1] .. ");"
+           end,
   },
   ["unsigned long"] = {
     vt = "UI4",
     ctype = function (type)
-	      return type.name
-	    end,
+              return type.name
+            end,
     set = function (args)
-	    return args[1] .. " = (unsigned long)lua_tointeger(L, " .. args[2] .. ");" 
-	  end,
+            return args[1] .. " = (unsigned long)lua_tointeger(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "lua_pushinteger(L, " .. args[1] .. ");"
-	   end,
+             return "lua_pushinteger(L, " .. args[1] .. ");"
+           end,
   },
   float = {
     vt = "R4",
     ctype = function (type)
-	      return type.name
-	    end,
+              return type.name
+            end,
     set = function (args)
-	    return args[1] .. " = lua_tonumber(L, " .. args[2] .. ");" 
-	  end,
+            return args[1] .. " = lua_tonumber(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "lua_pushnumber(L, " .. args[1] .. ");"
-	   end,
+             return "lua_pushnumber(L, " .. args[1] .. ");"
+           end,
   },
   double = {
     vt = "R8",
     ctype = function (type)
-	      return type.name
-	    end,
+              return type.name
+            end,
     set = function (args)
-	    return args[1] .. " = lua_tonumber(L, " .. args[2] .. ");" 
-	  end,
+            return args[1] .. " = lua_tonumber(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "lua_pushnumber(L, " .. args[1] .. ");"
-	   end,
+             return "lua_pushnumber(L, " .. args[1] .. ");"
+           end,
   },
   enum = {
     ctype = function (type)
-	      return type.typedef
-	    end,
+              return type.typedef
+            end,
     set = function (args)
-	    return template_set_enum{ type = args[3], stkidx = args[2], var = args[1] }
-	  end,
+            return template_set_enum{ type = args[3], stkidx = args[2], var = args[1] }
+          end,
     push = function (args)
-	     return template_push_enum{ type = args[2], var = args[1] }
-	   end,
+             return template_push_enum{ type = args[2], var = args[1] }
+           end,
   },
   array = {
     ctype = function (type, attr)
-	      return comtypes[type.elem_type.name].ctype(type.elem_type, attr) .. "*"
-	    end,
+              return comtypes[type.elem_type.name].ctype(type.elem_type, attr) .. "*"
+            end,
     set = function (args)
-	    local elem_type = args[3].elem_type
-	    local struct = args[1]:match("^([^%.]+%.)")
-	    return template_set_array{ stkidx = args[2], var = args[1], type = elem_type, idx = "__arr_idx_" .. counter(),
-				       set = comtypes[elem_type.name].set, size = (struct or "") .. args[4].size_is,
-				       ctype = comtypes[elem_type.name].ctype(elem_type, args[4]), init = comtypes[elem_type.name].init,
-				       ["if"] = cosmo.cif }
-	  end,
+            local elem_type = args[3].elem_type
+            local struct = args[1]:match("^([^%.]+%.)")
+            return template_set_array{ stkidx = args[2], var = args[1], type = elem_type, idx = "__arr_idx_" .. counter(),
+                                       set = comtypes[elem_type.name].set, size = (struct or "") .. args[4].size_is,
+                                       ctype = comtypes[elem_type.name].ctype(elem_type, args[4]), init = comtypes[elem_type.name].init,
+                                       ["if"] = cosmo.cif }
+          end,
     push = function (args)
-	    local elem_type = args[2].elem_type
-	    local struct = args[1]:match("^([^%.]+%.)") or ""
-	    return template_push_array{ var = args[1], type = elem_type, idx = "__arr_idx_" .. counter(),
-					push = comtypes[elem_type.name].push, size = struct .. args[3].size_is,
-					["if"] = cosmo.cif }
-	   end,
+            local elem_type = args[2].elem_type
+            local struct = args[1]:match("^([^%.]+%.)") or ""
+            return template_push_array{ var = args[1], type = elem_type, idx = "__arr_idx_" .. counter(),
+                                        push = comtypes[elem_type.name].push, size = struct .. args[3].size_is,
+                                        ["if"] = cosmo.cif }
+           end,
     clear = function (args)
-	      local elem_type = args[2].elem_type
-	      local struct = args[1]:match("^([^%.]+%.)") or ""
-	      return template_clear_array{ var = args[1], type = elem_type, idx = "__arr_idx_" .. counter(),
-					   clear = comtypes[elem_type.name].clear, size = struct .. args[3].size_is,
-					   ["if"] = cosmo.cif }
-	    end
+              local elem_type = args[2].elem_type
+              local struct = args[1]:match("^([^%.]+%.)") or ""
+              return template_clear_array{ var = args[1], type = elem_type, idx = "__arr_idx_" .. counter(),
+                                           clear = comtypes[elem_type.name].clear, size = struct .. args[3].size_is,
+                                           ["if"] = cosmo.cif }
+            end
   },
   struct = {
     ctype = function (type)
-	      return type.typedef
-	    end,
+              return type.typedef
+            end,
     init = function (args)
-	     local type = args[2]
-	     local fields = {}
-	     for _, field in ipairs(type.fields) do
-	       fields[#fields+1] = { type = field.type, init = comtypes[field.type.name].init, name = field.name }
-	     end
-	     return template_init_struct{ fields = fields, var = args[1], ["if"] = cosmo.cif }
-	   end,
+             local type = args[2]
+             local fields = {}
+             for _, field in ipairs(type.fields) do
+               fields[#fields+1] = { type = field.type, init = comtypes[field.type.name].init, name = field.name }
+             end
+             return template_init_struct{ fields = fields, var = args[1], ["if"] = cosmo.cif }
+           end,
     set = function (args)
-	    local type = args[3]
-	    local fields = {}
-	    for _, field in ipairs(type.fields) do
-	      fields[#fields+1] = { type = field.type, set = comtypes[field.type.name].set, name = field.name }
-	    end
-	    return template_set_struct{ fields = fields, stkidx = args[2], var = args[1], ["if"] = cosmo.cif }
-	  end,
+            local type = args[3]
+            local fields = {}
+            for _, field in ipairs(type.fields) do
+              fields[#fields+1] = { type = field.type, set = comtypes[field.type.name].set, name = field.name }
+            end
+            return template_set_struct{ fields = fields, stkidx = args[2], var = args[1], ["if"] = cosmo.cif }
+          end,
     push = function (args)
-	     local type = args[2]
-	     local fields = {}
-	     for _, field in ipairs(type.fields) do
-	       fields[#fields+1] = { type = field.type, push = comtypes[field.type.name].push, name = field.name }
-	     end
-	     return template_push_struct{ fields = fields, var = args[1], ["if"] = cosmo.cif }
-	   end,
+             local type = args[2]
+             local fields = {}
+             for _, field in ipairs(type.fields) do
+               fields[#fields+1] = { type = field.type, push = comtypes[field.type.name].push, name = field.name }
+             end
+             return template_push_struct{ fields = fields, var = args[1], ["if"] = cosmo.cif }
+           end,
     clear = function (args)
-	      local type = args[2]
-	      local fields = {}
-	      for _, field in ipairs(type.fields) do
-		fields[#fields+1] = { type = field.type, clear = comtypes[field.type.name].clear, name = field.name }
-	      end
-	      return template_clear_struct{ fields = fields, var = args[1], ["if"] = cosmo.cif }
-	    end
+              local type = args[2]
+              local fields = {}
+              for _, field in ipairs(type.fields) do
+                fields[#fields+1] = { type = field.type, clear = comtypes[field.type.name].clear, name = field.name }
+              end
+              return template_clear_struct{ fields = fields, var = args[1], ["if"] = cosmo.cif }
+            end
   },
   variant = {
     vt = "VARIANT",
     ctype = function (type)
-	      return "VARIANT"
-	    end,
+              return "VARIANT"
+            end,
     init = function (args)
-	     return "VariantInit(&" .. args[1] .. ");"
-	   end,
+             return "VariantInit(&" .. args[1] .. ");"
+           end,
     set = function (args)
-	    return "comgen_set_variant(L, " .. args[2] .. ", &" .. args[1] .. ");"
-	  end,
+            return "comgen_set_variant(L, " .. args[2] .. ", &" .. args[1] .. ");"
+          end,
     push = function (args)
-	     return "comgen_push_variant(L, &" .. args[1] .. ");"
-	   end,
+             return "comgen_push_variant(L, &" .. args[1] .. ");"
+           end,
     clear = function (args)
-	      return "VariantClear(&" .. args[1] .. ");"
-	    end,
+              return "VariantClear(&" .. args[1] .. ");"
+            end,
   },
   bstring = {
     vt = "BSTR",
     ctype = function (type)
-	      return "BSTR"
-	    end,
+              return "BSTR"
+            end,
     set = function (args)
-	    return args[1] .. " = comgen_tobstr(L, " .. args[2] .. ");"
-	  end,
+            return args[1] .. " = comgen_tobstr(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "comgen_pushbstr(L, " .. args[1] .. ");"
-	   end,
+             return "comgen_pushbstr(L, " .. args[1] .. ");"
+           end,
     clear = function (args)
-	      return "SysFreeString(" .. args[1] .. ");"
-	    end,
+              return "SysFreeString(" .. args[1] .. ");"
+            end,
   },
   tstring = {
     ctype = function (type, attr)
-	      if attr["in"] and not attr.out and not attr.ref then
-		return "LPCTSTR"
-	      else
-		return "LPTSTR"
-	      end
-	    end,
+              if attr["in"] and not attr.out and not attr.ref then
+                return "LPCTSTR"
+              else
+                return "LPTSTR"
+              end
+            end,
     set = function (args)
-	    return args[1] .. " = comgen_totstr(L, " .. args[2] .. ");"
-	  end,
+            return args[1] .. " = comgen_totstr(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "comgen_pushtstr(L, " .. args[1] .. ");"
-	   end,
+             return "comgen_pushtstr(L, " .. args[1] .. ");"
+           end,
     clear = function (args)
-	      return "comgen_cleartstr((TCHAR*)" .. args[1] .. ");"
-	    end,
+              return "comgen_cleartstr((TCHAR*)" .. args[1] .. ");"
+            end,
   },
   wstring = {
     ctype = function (type, attr)
-	      if attr["in"] and not attr.out and not attr.ref then
-		return "LPCWSTR"
-	      else
-		return "LPWSTR"
-	      end
-	    end,
+              if attr["in"] and not attr.out and not attr.ref then
+                return "LPCWSTR"
+              else
+                return "LPWSTR"
+              end
+            end,
     set = function (args)
-	    return args[1] .. " = comgen_towstr(L, " .. args[2] .. ");"
-	  end,
+            return args[1] .. " = comgen_towstr(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "comgen_pushwstr(L, " .. args[1] .. ");"
-	   end,
+             return "comgen_pushwstr(L, " .. args[1] .. ");"
+           end,
     clear = function (args)
-	      return "comgen_clearwstr((wchar_t *)" .. args[1] .. ");"
-	    end,
+              return "comgen_clearwstr((wchar_t *)" .. args[1] .. ");"
+            end,
   },
   safearray = {
     ctype = function (type)
-	      return "SAFEARRAY *"
-	    end,
+              return "SAFEARRAY *"
+            end,
     set = function (args)
-	    return template_set_safearray{ name = args[1], stkidx = args[2],
-					   lbound = args[3].lbound or 0, 
-					   elem = { 
-					     set = comtypes[args[3].elem.name].set, 
-					     ctype = comtypes[args[3].elem.name].ctype(args[3].elem, args[3].elem.attr or {}),
-					     init = comtypes[args[3].elem.name].init,
-					     type = args[3].elem,
-					     vt = comtypes[args[3].elem.name].vt
-					   }, ["if"] = cosmo.cif }
-	  end,
+            return template_set_safearray{ name = args[1], stkidx = args[2],
+                                           lbound = args[3].lbound or 0,
+                                           elem = {
+                                             set = comtypes[args[3].elem.name].set,
+                                             ctype = comtypes[args[3].elem.name].ctype(args[3].elem, args[3].elem.attr or {}),
+                                             init = comtypes[args[3].elem.name].init,
+                                             type = args[3].elem,
+                                             vt = comtypes[args[3].elem.name].vt
+                                           }, ["if"] = cosmo.cif }
+          end,
     push = function (args)
-	     return template_push_safearray{ name = args[1],
-					    elem = { 
-					      ctype = comtypes[args[2].elem.name].ctype(args[2].elem, args[2].elem.attr or {}),
-					      push = comtypes[args[2].elem.name].push,
-					      type = args[2].elem,
-					    }, ["if"] = cosmo.cif }
-	   end,
+             return template_push_safearray{ name = args[1],
+                                            elem = {
+                                              ctype = comtypes[args[2].elem.name].ctype(args[2].elem, args[2].elem.attr or {}),
+                                              push = comtypes[args[2].elem.name].push,
+                                              type = args[2].elem,
+                                            }, ["if"] = cosmo.cif }
+           end,
     clear = function (args)
-	      return "SafeArrayDestroy(" .. args[1] .. ");"
-	    end
+              return "SafeArrayDestroy(" .. args[1] .. ");"
+            end
   },
   string = {
     ctype = function (type, attr)
-	      if attr["in"] and not attr.out and not attr.ref then
-		return "LPCSTR"
-	      else
-		return "LPSTR"
-	      end
-	    end,
+              if attr["in"] and not attr.out and not attr.ref then
+                return "LPCSTR"
+              else
+                return "LPSTR"
+              end
+            end,
     set = function (args)
-	    return args[1] .. " = lua_tostring(L, " .. args[2] .. ");"
-	  end,
+            return args[1] .. " = lua_tostring(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return "lua_pushstring(L, " .. args[1] .. ");"
-	   end
+             return "lua_pushstring(L, " .. args[1] .. ");"
+           end
   },
   interface = {
     vt = "UNKNOWN",
     ctype = function (type)
-	      return type.ifname .. " *"
-	    end,
+              return type.ifname .. " *"
+            end,
     set = function (args)
-	    local type = args[3]
-	    return args[1] .. " = (" .. type.ifname .. " *)comgen_tointerface(L, " .. args[2] .. ", \"" .. type.iid .. "\");"
-	  end,
+            local type = args[3]
+            return args[1] .. " = (" .. type.ifname .. " *)comgen_tointerface(L, " .. args[2] .. ", \"" .. type.iid .. "\");"
+          end,
     push = function (args)
-	     local type = args[2]
-	     local attr = args[3]
-	     if attr.iid_is then
-	       return "comgen_pushinterface(L, " .. args[1] .. ", __" .. attr.iid_is .. "_siid);"
-	     else
-	       return "comgen_pushinterface(L, " .. args[1] .. ", \"" .. type.iid .. "\");"
-	     end
-	   end,
+             local type = args[2]
+             local attr = args[3]
+             if attr.iid_is then
+               return "comgen_pushinterface(L, " .. args[1] .. ", __" .. attr.iid_is .. "_siid);"
+             else
+               return "comgen_pushinterface(L, " .. args[1] .. ", \"" .. type.iid .. "\");"
+             end
+           end,
   },
   refiid = {
     ctype = function (type)
-	      return "IID"
-	    end,
+              return "IID"
+            end,
     set = function (args)
-	    return template_set_refiid{ stkidx = args[2], var = args[1] }
-	  end,
+            return template_set_refiid{ stkidx = args[2], var = args[1] }
+          end,
     push = function (args)
-	     return template_push_refiid{ var = args[1] }
-	   end
+             return template_push_refiid{ var = args[1] }
+           end
   },
   hresult = {
     ctype = function (type)
-	      return "HRESULT"
-	    end,
+              return "HRESULT"
+            end,
     set = function (args)
-	    return args[1] .. " = lua_tointeger(L, " .. args[2] .. ");" 
-	  end,
+            return args[1] .. " = lua_tointeger(L, " .. args[2] .. ");"
+          end,
     push = function (args)
-	     return [[
-		 if(!SUCCEEDED(]] .. args[1] .. [[)) {
-		   char sz[1024];
-		   if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ]] .. args[1] .. [[, 0, sz, 1024, 0))
-		     lua_pushinteger(L, ]] .. args[1] .. [[);
-		   else
-		     lua_pushstring(L, sz);		   
+             return [[
+                 if(!SUCCEEDED(]] .. args[1] .. [[)) {
+                   char sz[1024];
+                   if (!FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ]] .. args[1] .. [[, 0, sz, 1024, 0))
+                     lua_pushinteger(L, ]] .. args[1] .. [[);
+                   else
+                     lua_pushstring(L, sz);
                  } else lua_pushstring(L, "OK");
-	     ]]
-	   end
+             ]]
+           end
   }
 }
 
@@ -536,27 +536,27 @@ _M.types = {
   refiid = { name = "refiid" },
   hresult = { name = "hresult" },
   enum = function (typedef)
-	   return { name = "enum", typedef = typedef }
-	 end,
+           return { name = "enum", typedef = typedef }
+         end,
   struct = function (typedef, fields)
-	     local t = { name = "struct", typedef = typedef }
-	     for _, field in ipairs(fields) do
-	       if field.type == "self" then
-		 field.type = t
-	       end
-	     end
-	     t.fields = fields
-	     return t
-	   end,
+             local t = { name = "struct", typedef = typedef }
+             for _, field in ipairs(fields) do
+               if field.type == "self" then
+                 field.type = t
+               end
+             end
+             t.fields = fields
+             return t
+           end,
   array = function (type, attr)
-	    return { name = "array", elem_type = type, attributes = attr }
-	  end,
+            return { name = "array", elem_type = type, attributes = attr }
+          end,
   interface = function (ifdesc)
-		return { name = "interface", ifname = ifdesc.name, iid = ifdesc.iid }
-	      end,
+                return { name = "interface", ifname = ifdesc.name, iid = ifdesc.iid }
+              end,
   safearray = function (vartype, lbound)
-		return { name = "safearray", lbound = lbound, elem = vartype }
-	      end
+                return { name = "safearray", lbound = lbound, elem = vartype }
+              end
 }
 
 _M.types.vartype = {
@@ -621,10 +621,10 @@ function _M.compile_method(method)
   for i, param in ipairs(method.parameters) do
     local typename = param.type.name
     local pdata = { name = param.name, pass = param.name, type = param.type,
-		    ctype = comtypes[typename].ctype(param.type, param.attributes or {}),
-		    init = comtypes[typename].init,
-		    clear = comtypes[typename].clear, pos = pos,
-		    attr = param.attributes or {} }
+                    ctype = comtypes[typename].ctype(param.type, param.attributes or {}),
+                    init = comtypes[typename].init,
+                    clear = comtypes[typename].clear, pos = pos,
+                    attr = param.attributes or {} }
     local attr = pdata.attr
     if attr.out and not attr.retval then
       mdata.nresults = mdata.nresults + 1
