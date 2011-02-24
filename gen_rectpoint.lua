@@ -13,137 +13,137 @@ local IPoint = {
   iid = "{CCA7F35D-DAF3-11D0-8C53-0080C73925BA}",
   parent = { name = "IUnknown", iid = "{00000000-0000-0000-C000-000000000046}" },
   methods = {
-    { 
-      name = "SetCoords", 
+    {
+      name = "SetCoords",
       parameters = {
-	{ type = types.long, attributes = { ["in"] = true }, name = "x" },
-	{ type = types.long, attributes = { ["in"] = true }, name = "y" },
+        { type = types.long, attributes = { ["in"] = true }, name = "x" },
+        { type = types.long, attributes = { ["in"] = true }, name = "y" },
       }
     },
-    { 
-      name = "SetCoords2", 
+    {
+      name = "SetCoords2",
       parameters = {
-	{ type = types.variant, attributes = { ["in"] = true }, name = "x" },
-	{ type = types.variant, attributes = { ["in"] = true }, name = "y" },
+        { type = types.variant, attributes = { ["in"] = true }, name = "x" },
+        { type = types.variant, attributes = { ["in"] = true }, name = "y" },
       }
     },
     {
       name = "GetCoords",
       parameters = {
-	{ type = types.long, attributes = { out = true }, name = "px" },
-	{ type = types.long, attributes = { out = true }, name = "py" }
+        { type = types.long, attributes = { out = true }, name = "px" },
+        { type = types.long, attributes = { out = true }, name = "py" }
       }
     },
     {
       name = "GetCoords2",
       parameters = {
-	{ type = types.variant, attributes = { out = true }, name = "px" },
-	{ type = types.variant, attributes = { out = true }, name = "py" }
+        { type = types.variant, attributes = { out = true }, name = "px" },
+        { type = types.variant, attributes = { out = true }, name = "py" }
       }
     },
     {
       name = "SetGetCoords",
       parameters = {
-	{ type = types.variant, attributes = { ["in"] = true, out = true }, name = "px" },
-	{ type = types.variant, attributes = { ["in"] = true, out = true }, name = "py" }
+        { type = types.variant, attributes = { ["in"] = true, out = true }, name = "px" },
+        { type = types.variant, attributes = { ["in"] = true, out = true }, name = "py" }
       }
     },
     {
       name = "GetType",
       parameters = {
-	{ type = types.variant, attributes = { retval = true, out = true }, name = "t" },
+        { type = types.variant, attributes = { retval = true, out = true }, name = "t" },
       }
     },
     {
       name = "RoundTrip",
       parameters = {
-	{ type = types.variant, attributes = { ["in"] = true }, name = "s1" },
-	{ type = types.variant, attributes = { retval = true, out = true }, name = "s2" },
+        { type = types.variant, attributes = { ["in"] = true }, name = "s1" },
+        { type = types.variant, attributes = { retval = true, out = true }, name = "s2" },
       }
     },
     {
       name = "GetType2",
       parameters = {
-	{ type = types.bstring, attributes = { retval = true, out = true }, name = "t" },
+        { type = types.bstring, attributes = { retval = true, out = true }, name = "t" },
       }
     },
     {
       name = "RoundTrip2",
       parameters = {
-	{ type = types.bstring, attributes = { ["in"] = true }, name = "s1" },
-	{ type = types.bstring, attributes = { retval = true, out = true }, name = "s2" },
+        { type = types.bstring, attributes = { ["in"] = true }, name = "s1" },
+        { type = types.bstring, attributes = { retval = true, out = true }, name = "s2" },
       }
     },
     {
       name = "GetType3",
       parameters = {
-	{ type = types.tstring, attributes = { retval = true, out = true }, name = "t" },
+        { type = types.tstring, attributes = { retval = true, out = true }, name = "t" },
       }
     },
     {
       name = "RoundTrip3",
       parameters = {
-	{ type = types.tstring, attributes = { ["in"] = true }, name = "s1" },
-	{ type = types.tstring, attributes = { retval = true, out = true }, name = "s2" },
+        { type = types.tstring, attributes = { ["in"] = true }, name = "s1" },
+        { type = types.tstring, attributes = { retval = true, out = true }, name = "s2" },
       }
     },
     {
       name = "GetType4",
       parameters = {
-	{ type = types.wstring, attributes = { retval = true, out = true }, name = "t" },
+        { type = types.wstring, attributes = { retval = true, out = true }, name = "t" },
       }
     },
     {
       name = "RoundTrip4",
       parameters = {
-	{ type = types.wstring, attributes = { ["in"] = true }, name = "s1" },
-	{ type = types.wstring, attributes = { retval = true, out = true }, name = "s2" },
+        { type = types.wstring, attributes = { ["in"] = true }, name = "s1" },
+        { type = types.wstring, attributes = { retval = true, out = true }, name = "s2" },
       }
     },
     {
       name = "GetType5",
       parameters = {
-	{ type = types.string, attributes = { retval = true, out = true }, name = "t" },
+        { type = types.string, attributes = { retval = true, out = true }, name = "t" },
       }
     },
     {
       name = "RoundTrip5",
       parameters = {
-	{ type = types.string, attributes = { ["in"] = true }, name = "s1" },
-	{ type = types.string, attributes = { retval = true, out = true }, name = "s2" },
+        { type = types.string, attributes = { ["in"] = true }, name = "s1" },
+        { type = types.string, attributes = { retval = true, out = true }, name = "s2" },
       }
     },
     {
       name = "Sum",
       parameters = {
-	{ type = types.safearray(types.long), attributes = { ["in"] = true, ref = true }, name = "ppsa" },
-	{ type = types.long, attributes = { retval = true, out = true }, name = "pSum" },
+        { type = types.safearray(types.long), attributes = { ["in"] = true, ref = true }, name = "ppsa" },
+        { type = types.long, attributes = { retval = true, out = true }, name = "pSum" },
       }
     },
     {
       name = "GetCoordsArr",
       parameters = {
-	{ type = types.safearray(types.long), attributes = { out = true, retval = true }, name = "ppsa" },
+        { type = types.safearray(types.long), attributes = { out = true, retval = true }, name = "ppsa" },
       }
     },
     {
       name = "Sum2",
       parameters = {
-	{ type = types.variant, attributes = { ["in"] = true }, name = "var" },
-	{ type = types.long, attributes = { retval = true, out = true }, name = "pSum" },
+        { type = types.variant, attributes = { ["in"] = true }, name = "var" },
+        { type = types.long, attributes = { retval = true, out = true }, name = "pSum" },
       }
     },
     {
       name = "GetCoordsArr2",
       parameters = {
-	{ type = types.variant, attributes = { out = true, retval = true }, name = "pvar" },
+        { type = types.variant, attributes = { out = true, retval = true }, name = "pvar" },
       }
     },
     {
       name = "Length",
       parameters = {
-	{ type = types.variant, attributes = { ["in"] = true }, name = "var" },
-	{ type = types.double, attributes = { retval = true, out = true }, name = "pSum" },
+        { type = types.variant, attributes = { ["in"] = true }, name = "var" },
+        { type = types.double, attributes = { retval = true, out = true }, name = "pSum" },
       }
     },
   }
@@ -154,62 +154,62 @@ local IRect = {
   iid = "{CCA7F35F-DAF3-11D0-8C53-0080C73925BA}",
   parent = { name = "IUnknown", iid = "{00000000-0000-0000-C000-000000000046}" },
   methods = {
-    { 
-      name = "SetCoords", 
+    {
+      name = "SetCoords",
       parameters = {
-	{ type = types.long, attributes = { ["in"] = true }, name = "left" },
-	{ type = types.long, attributes = { ["in"] = true }, name = "top" },
-	{ type = types.long, attributes = { ["in"] = true }, name = "right" },
-	{ type = types.long, attributes = { ["in"] = true }, name = "bottom" }
+        { type = types.long, attributes = { ["in"] = true }, name = "left" },
+        { type = types.long, attributes = { ["in"] = true }, name = "top" },
+        { type = types.long, attributes = { ["in"] = true }, name = "right" },
+        { type = types.long, attributes = { ["in"] = true }, name = "bottom" }
       }
     },
-    { 
-      name = "SetCoords2", 
+    {
+      name = "SetCoords2",
       parameters = {
-	{ type = SPoint, attributes = { ["in"] = true }, name = "topLeft" },
-	{ type = SPoint, attributes = { ["in"] = true }, name = "botRight" }
+        { type = SPoint, attributes = { ["in"] = true }, name = "topLeft" },
+        { type = SPoint, attributes = { ["in"] = true }, name = "botRight" }
       }
     },
-    { 
-      name = "SetCoords3", 
+    {
+      name = "SetCoords3",
       parameters = {
-	{ type = SPoint, attributes = { ["in"] = true, ref = true }, name = "topLeft" },
-	{ type = SPoint, attributes = { ["in"] = true, ref = true }, name = "botRight" }
+        { type = SPoint, attributes = { ["in"] = true, ref = true }, name = "topLeft" },
+        { type = SPoint, attributes = { ["in"] = true, ref = true }, name = "botRight" }
       }
     },
-    { 
-      name = "SetCoords4", 
+    {
+      name = "SetCoords4",
       parameters = {
-	{ type = types.interface(IPoint), attributes = { ["in"] = true }, name = "topLeft" },
-	{ type = types.interface(IPoint), attributes = { ["in"] = true }, name = "botRight" }
+        { type = types.interface(IPoint), attributes = { ["in"] = true }, name = "topLeft" },
+        { type = types.interface(IPoint), attributes = { ["in"] = true }, name = "botRight" }
       }
     },
-    { 
-      name = "GetCoords", 
+    {
+      name = "GetCoords",
       parameters = {
-	{ type = SPoint, attributes = { out = true }, name = "topLeft" },
-	{ type = SPoint, attributes = { out = true }, name = "botRight" }
+        { type = SPoint, attributes = { out = true }, name = "topLeft" },
+        { type = SPoint, attributes = { out = true }, name = "botRight" }
       }
     },
-    { 
-      name = "GetCoords2", 
+    {
+      name = "GetCoords2",
       parameters = {
-	{ type = types.interface(IPoint), attributes = { out = true }, name = "topLeft" },
-	{ type = types.interface(IPoint), attributes = { out = true }, name = "botRight" }
+        { type = types.interface(IPoint), attributes = { out = true }, name = "topLeft" },
+        { type = types.interface(IPoint), attributes = { out = true }, name = "botRight" }
       }
     },
     {
       name = "Volume",
       attributes = { propget = true },
       parameters = {
-	{ type = types.long, attributes = { out = true, retval = true }, name = "pVal" }
+        { type = types.long, attributes = { out = true, retval = true }, name = "pVal" }
       }
     },
     {
       name = "DrawRect",
       parameters = {
-	{ type = types.enum("RECTTYPE"), attributes = { ["in"] = true }, name = "type" },
-	{ type = types.long, attributes = { out = true, retval = true }, name = "res" }
+        { type = types.enum("RECTTYPE"), attributes = { ["in"] = true }, name = "type" },
+        { type = types.long, attributes = { out = true, retval = true }, name = "res" }
       }
     }
   }
@@ -227,10 +227,15 @@ local rectpoint = {
   modname = "rectpointlib",
   header = "rectpoint",
   interfaces = { IRect, IPoint },
+  wrappers = {
+    LuaPoint = { IPoint },
+    LuaRect = { IRect },
+  },
   enums = { RECTTYPE }
 }
 
-local source, def = generator.compile(rectpoint)
+local source, def, wrap = generator.compile(rectpoint)
 
 generator.writefile("rectpointlib.cpp", source)
 generator.writefile("rectpointlib.def", def)
+generator.writefile("rectpoint_w.cpp", wrap)

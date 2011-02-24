@@ -1,7 +1,7 @@
 // Point.cpp : Implementation of CPoint
+#include "stdafx.h"
 #include <assert.h>
 #include <math.h>
-#include "stdafx.h"
 #include "RectPoint.h"
 #include "Point.h"
 

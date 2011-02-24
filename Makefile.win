@@ -1,4 +1,5 @@
 
+ATL_INCLUDE_DIR="c:\Program Files\Microsoft Platform SDK for Windows Server 2003 R2\Include\atl"
 OLE_LIB="c:\Program Files\Microsoft Platform SDK for Windows Server 2003 R2\lib\ole32.lib"
 OLEAUT_LIB="c:\Program Files\Microsoft Platform SDK for Windows Server 2003 R2\lib\oleaut32.lib"
 LUA="c:\Lua51\lua.exe"
@@ -17,8 +18,11 @@ rectpointlib.cpp:
 rectpointlib.obj: rectpointlib.cpp
 	cl /c /I$(LUA_INCLUDE_DIR) /Irectpoint rectpointlib.cpp
 
-rectpointlib.dll: rectpointlib.obj
-	link /dll rectpointlib.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:rectpointlib.def
+rectpoint_w.obj: rectpoint_w.cpp
+	cl /c /D "WIN32" /D "_WINDOWS" /D "_USRDLL" /D "_WINDLL" /EHsc /I$(ATL_INCLUDE_DIR) /I$(LUA_INCLUDE_DIR) /Irectpoint rectpoint_w.cpp
+
+rectpointlib.dll: rectpointlib.obj rectpoint_w.obj
+	link /dll rectpointlib.obj rectpoint_w.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:rectpointlib.def
 
 opclib.cpp:
 	$(LUA) -l luarocks.require gen_opc.lua

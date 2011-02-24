@@ -8,6 +8,7 @@ local template_def = cosmo.compile[[
 EXPORTS
     luaopen_$modname
 ]]
+local template_wrapper = cosmo.compile(require("comgen.template_wrapper"))
 
 local template_set_enum = cosmo.compile[[
   lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_enums");
@@ -29,17 +30,17 @@ local template_push_enum = cosmo.compile[[
 
 local template_init_struct = cosmo.compile[=[
   $fields[[
-    $if{init}[[$init{ var.."."..name, type, type.attributes }]]
+    $if{init}[[$init{ "("..var..")."..name, type, type.attributes }]]
   ]]
 ]=]
 
 local template_set_struct = cosmo.compile[=[
-  int __pos_$stkidx;
+  int __pos_$(strip(stkidx));
   $fields[[
     $if{set}[[
       lua_getfield(L, $stkidx, "$name");
-      __pos_$stkidx = lua_gettop(L);
-      $set{ var.."."..name, "__pos_" .. stkidx, type, type.attributes }
+      __pos_$(strip(stkidx)) = lua_gettop(L);
+      $set{ "(" .. var..")."..name, "__pos_" .. strip(stkidx), type, type.attributes }
       lua_pop(L, 1);
     ]]
   ]]
@@ -48,28 +49,28 @@ local template_set_struct = cosmo.compile[=[
 local template_push_struct = cosmo.compile[=[
   lua_newtable(L);
   $fields[[
-    $if{push}[[$push{ var.."."..name, type, type.attributes }
+    $if{push}[[$push{ "(" .. var..")."..name, type, type.attributes }
           lua_setfield(L, -2, "$name");]]
   ]]
 ]=]
 
 local template_clear_struct = cosmo.compile[=[
   $fields[[
-    $if{clear}[[$clear{ var.."."..name, type, type.attributes }]]
+    $if{clear}[[$clear{ "(" .. var..")."..name, type, type.attributes }]]
   ]]
 ]=]
 
 local template_set_array = cosmo.compile[=[
   $if{set}[[
-    int __pos_$stkidx;
+    int __pos_$$(strip(stkidx));
     if(lua_objlen(L, $stkidx) != $size)
       luaL_error(L, "array size does not match, expected: %i, actual: %i", $size, lua_objlen(L, $stkidx));
     $var = ($ctype *)CoTaskMemAlloc($size * sizeof($ctype));
     for(size_t $idx = 0; $idx < $size; $idx++) {
       lua_rawgeti(L, $stkidx, $idx + 1);
-      __pos_$stkidx = lua_gettop(L);
+      __pos_$(strip(stkidx)) = lua_gettop(L);
       $if{init}[[$init{ var .. "[" .. idx .. "]", type, type.attributes }]]
-      $set{ var .. "[" .. idx .. "]", "__pos_" .. stkidx, type, type.attributes }
+      $set{ var .. "[" .. idx .. "]", "__pos_" .. strip(stkidx), type, type.attributes }
       lua_pop(L, 1);
     }
   ]]
@@ -99,8 +100,8 @@ local template_set_safearray = cosmo.compile[=[
   $name = SafeArrayCreateVector(comgen_name2vt(L, "$(elem.vt)"), $lbound, __$(name)_n);
   if(!$name) luaL_error(L, "could not create SAFEARRAY $name");
   $(elem.ctype) * __$(name)_elems;
-  hr = SafeArrayAccessData($name, (void**)&__$(name)_elems);
-  if(!SUCCEEDED(hr)) luaL_error(L, "could not access SAFEARRAY $name");
+  __hr = SafeArrayAccessData($name, (void**)&__$(name)_elems);
+  if(!SUCCEEDED(__hr)) luaL_error(L, "could not access SAFEARRAY $name");
   for(long i = $lbound, j = 1; j <= __$(name)_n; i++, j++) {
     $if{elem.init}[[$(elem.init){ "__" .. name .. "_elems[i]" , elem.type, elem.type.attributes }]]
     lua_pushinteger(L, j);
@@ -114,8 +115,8 @@ local template_set_safearray = cosmo.compile[=[
 local template_push_safearray = cosmo.compile[=[
   if(SafeArrayGetDim($name) != 1) luaL_error(L, "SAFEARRAY $name is not a vector");
   $(elem.ctype) * __$(name)_elems;
-  hr = SafeArrayAccessData($name, (void**)&__$(name)_elems);
-  if(!SUCCEEDED(hr)) luaL_error(L, "could not access SAFEARRAY $name");
+  __hr = SafeArrayAccessData($name, (void**)&__$(name)_elems);
+  if(!SUCCEEDED(__hr)) luaL_error(L, "could not access SAFEARRAY $name");
   long lbound, ubound;
   SafeArrayGetUBound($name, 1, &ubound);
   SafeArrayGetLBound($name, 1, &lbound);
@@ -136,15 +137,15 @@ local template_set_refiid = cosmo.compile[=[
   }
   wchar_t __$(var)_wsiid[GUID_SIZE];
   mbstowcs(__$(var)_wsiid, __$(var)_siid, GUID_SIZE);
-  hr = IIDFromString(__$(var)_wsiid, &$var);
-  if(!SUCCEEDED(hr)) comgen_error(L, hr);
+  __hr = IIDFromString(__$(var)_wsiid, &$var);
+  if(!SUCCEEDED(__hr)) comgen_error(L, hr);
 ]=]
 
 local template_push_refiid = cosmo.compile[=[
   char __$(var)_p_siid[GUID_SIZE];
   wchar_t __$(var)_p_wsiid[GUID_SIZE];
-  hr = StringFromIID(&$var, __$(var)_p_wsiid);
-  if(!SUCCEEDED(hr)) comgen_error(L, hr);
+  __hr = StringFromIID(&$var, __$(var)_p_wsiid);
+  if(!SUCCEEDED(__hr)) comgen_error(L, hr);
   wcstombs(__$(var)_p_siid, __$(var)_p_wsiid, GUID_SIZE);
   lua_pushlstring(L, __$(var)_p_siid, GUID_SIZE);
 ]=]
@@ -301,7 +302,14 @@ comtypes = {
             return template_set_array{ stkidx = args[2], var = args[1], type = elem_type, idx = "__arr_idx_" .. counter(),
                                        set = comtypes[elem_type.name].set, size = (struct or "") .. args[4].size_is,
                                        ctype = comtypes[elem_type.name].ctype(elem_type, args[4]), init = comtypes[elem_type.name].init,
-                                       ["if"] = cosmo.cif }
+                                       ["if"] = cosmo.cif, 
+                                       strip = function (s) 
+                                                 if not tonumber(s) then 
+                                                   return s:match("(%d+)") 
+                                                 else
+                                                   return s
+                                                 end
+                                               end }
           end,
     push = function (args)
             local elem_type = args[2].elem_type
@@ -336,7 +344,14 @@ comtypes = {
             for _, field in ipairs(type.fields) do
               fields[#fields+1] = { type = field.type, set = comtypes[field.type.name].set, name = field.name }
             end
-            return template_set_struct{ fields = fields, stkidx = args[2], var = args[1], ["if"] = cosmo.cif }
+            return template_set_struct{ fields = fields, stkidx = args[2], var = args[1], ["if"] = cosmo.cif, 
+            strip = function (s) 
+                      if not tonumber(s) then 
+                        return s:match("(%d+)") 
+                      else
+                        return s
+                      end
+                    end }
           end,
     push = function (args)
              local type = args[2]
@@ -460,7 +475,7 @@ comtypes = {
               end
             end,
     set = function (args)
-            return args[1] .. " = lua_tostring(L, " .. args[2] .. ");"
+            return args[1] .. " = (LPSTR)lua_tostring(L, " .. args[2] .. ");"
           end,
     push = function (args)
              return "lua_pushstring(L, " .. args[1] .. ");"
@@ -651,6 +666,51 @@ function _M.compile_method(method)
   return mdata
 end
 
+function _M.compile_wrapper_method(method)
+  local mdata = {
+    methodname = method.name,
+	cname = method.name,
+    nargs = 0,
+    nresults = 0,
+    parameters = {}
+  }
+  local attr = method.attributes or {}
+  if attr.propget then
+    mdata.cname = "get_" .. method.name
+    mdata.methodname = mdata.cname
+  end
+  if attr.propput then
+    mdata.cname = "set_" .. method.name
+    mdata.methodname = mdata.cname
+  end
+  local pos = 2
+  for i = 1, #method.parameters, 1 do
+    local param = method.parameters[i]
+    local typename = param.type.name
+    local pdata = { name = param.name, type = param.type,
+                    ctype = comtypes[typename].ctype(param.type,               param.attributes or {}),
+                    pos = "__top + " .. pos, attr = param.attributes or {} }
+    local attr = pdata.attr
+    if attr.out or attr.retval then
+      pos = pos + 1
+      pdata.name = "*" .. pdata.name
+	  pdata.init = comtypes[typename].init
+      pdata.set = comtypes[typename].set
+      mdata.nresults = mdata.nresults + 1
+    end
+    if attr["in"] and not attr.unique then
+      pdata.init = nil
+      pdata.push = comtypes[typename].push
+      mdata.nargs = mdata.nargs + 1
+    end
+    if attr.ref and not attr.out and not attr.retval then
+      pdata.name = "*" .. pdata.name
+    end
+    mdata.parameters[i] = pdata
+  end
+  return mdata
+end
+
 function _M.compile_interface(interface)
   local ifdata = {
     modname = string.lower(interface.name),
@@ -668,17 +728,49 @@ function _M.compile_interface(interface)
   return ifdata
 end
 
+function _M.compile_wrapper_interface(interface)
+  local ifdata = {
+    ifname = interface.name,
+    iid = interface.iid,
+    parent = interface.parent.name,
+    parent_iid = interface.parent.iid,
+    methods = {},
+    concat = cosmo.concat,
+    ["if"] = cosmo.cif
+  }
+  for _, method in ipairs(interface.methods) do
+    table.insert(ifdata.methods, _M.compile_wrapper_method(method))
+  end
+  return ifdata
+end
+
+function _M.compile_wrapper(name, interfaces)
+  local wdata = {
+    wname = name,
+    interfaces = {}
+  }
+  for _, interface in ipairs(interfaces) do
+    table.insert(wdata.interfaces, _M.compile_wrapper_interface(interface))
+  end
+  return wdata
+end
+
 function _M.compile(library)
   local libdata = {
     modname = library.modname,
     header = library.header or library.modname,
     interfaces = {}, enums = library.enums or {},
+    wrappers = {},
     ["if"] = cosmo.cif
   }
   for _, interface in ipairs(library.interfaces) do
     table.insert(libdata.interfaces, _M.compile_interface(interface))
   end
-  return template(libdata), template_def(libdata)
+  for name, interfaces in pairs(library.wrappers or {}) do
+    table.insert(libdata.wrappers, _M.compile_wrapper(name, interfaces))
+  end
+  return template(libdata), template_def(libdata),
+    template_wrapper(libdata):gsub("&%*", ""):gsub("_%*", "_")
 end
 
 return _M
