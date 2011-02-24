@@ -62,7 +62,7 @@ local template_clear_struct = cosmo.compile[=[
 
 local template_set_array = cosmo.compile[=[
   $if{set}[[
-    int __pos_$$(strip(stkidx));
+    int __pos_$(strip(stkidx));
     if(lua_objlen(L, $stkidx) != $size)
       luaL_error(L, "array size does not match, expected: %i, actual: %i", $size, lua_objlen(L, $stkidx));
     $var = ($ctype *)CoTaskMemAlloc($size * sizeof($ctype));
@@ -138,14 +138,14 @@ local template_set_refiid = cosmo.compile[=[
   wchar_t __$(var)_wsiid[GUID_SIZE];
   mbstowcs(__$(var)_wsiid, __$(var)_siid, GUID_SIZE);
   __hr = IIDFromString(__$(var)_wsiid, &$var);
-  if(!SUCCEEDED(__hr)) comgen_error(L, hr);
+  if(!SUCCEEDED(__hr)) comgen_error(L, __hr);
 ]=]
 
 local template_push_refiid = cosmo.compile[=[
   char __$(var)_p_siid[GUID_SIZE];
   wchar_t __$(var)_p_wsiid[GUID_SIZE];
-  __hr = StringFromIID(&$var, __$(var)_p_wsiid);
-  if(!SUCCEEDED(__hr)) comgen_error(L, hr);
+  __hr = StringFromIID($var, (LPOLESTR *)__$(var)_p_wsiid);
+  if(!SUCCEEDED(__hr)) comgen_error(L, __hr);
   wcstombs(__$(var)_p_siid, __$(var)_p_wsiid, GUID_SIZE);
   lua_pushlstring(L, __$(var)_p_siid, GUID_SIZE);
 ]=]
@@ -305,7 +305,7 @@ comtypes = {
                                        ["if"] = cosmo.cif, 
                                        strip = function (s) 
                                                  if not tonumber(s) then 
-                                                   return s:match("(%d+)") 
+                                                   return s:gsub(" ", "_"):gsub("%+", "__")
                                                  else
                                                    return s
                                                  end
@@ -347,7 +347,7 @@ comtypes = {
             return template_set_struct{ fields = fields, stkidx = args[2], var = args[1], ["if"] = cosmo.cif, 
             strip = function (s) 
                       if not tonumber(s) then 
-                        return s:match("(%d+)") 
+                        return s:gsub(" ", "_"):gsub("%+", "__")
                       else
                         return s
                       end
@@ -493,7 +493,7 @@ comtypes = {
     push = function (args)
              local type = args[2]
              local attr = args[3]
-             if attr.iid_is then
+             if attr and attr.iid_is then
                return "comgen_pushinterface(L, " .. args[1] .. ", __" .. attr.iid_is .. "_siid);"
              else
                return "comgen_pushinterface(L, " .. args[1] .. ", \"" .. type.iid .. "\");"
@@ -761,6 +761,7 @@ function _M.compile(library)
     header = library.header or library.modname,
     interfaces = {}, enums = library.enums or {},
     wrappers = {},
+    builtin = library.builtin,
     ["if"] = cosmo.cif
   }
   for _, interface in ipairs(library.interfaces) do

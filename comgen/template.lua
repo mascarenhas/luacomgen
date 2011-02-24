@@ -3,7 +3,7 @@ return [==[
 
 #include <stdio.h>
 #include "$(header).h"
-#include "$(header)_i.c"
+$if{ not builtin }[[#include "$(header)_i.c"]]
 
 extern "C" {
   #include "lua.h"

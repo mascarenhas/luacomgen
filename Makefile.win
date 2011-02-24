@@ -12,7 +12,7 @@ comgen.obj: comgen.cpp
 comgen.dll: comgen.obj
 	link /dll comgen.obj $(LUA_LIB) $(OLE_LIB) /def:comgen.def
 
-rectpointlib.cpp:
+rectpointlib.cpp: gen_rectpoint.lua
 	$(LUA) -l luarocks.require gen_rectpoint.lua
 
 rectpointlib.obj: rectpointlib.cpp
@@ -24,16 +24,28 @@ rectpoint_w.obj: rectpoint_w.cpp
 rectpointlib.dll: rectpointlib.obj rectpoint_w.obj
 	link /dll rectpointlib.obj rectpoint_w.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:rectpointlib.def
 
-opclib.cpp:
+opclib.cpp: gen_opc.lua
 	$(LUA) -l luarocks.require gen_opc.lua
 
 opclib.obj: opclib.cpp
-	cl /c /W3 /I$(LUA_INCLUDE_DIR) /Iopc opclib.cpp
+	cl /c /W3 /D_CRT_SECURE_NO_WARNINGS /I$(LUA_INCLUDE_DIR) /Iopc opclib.cpp
 
-opclib.dll: opclib.obj
-	link /dll opclib.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:opclib.def
+opclib_w.obj: opclib_w.cpp
+	cl /c /D "WIN32" /D "_WINDOWS" /D "_USRDLL" /D "_WINDLL" /EHsc /I$(ATL_INCLUDE_DIR) /I$(LUA_INCLUDE_DIR) /Iopc opclib_w.cpp
 
-all: comgen.dll rectpointlib.dll opclib.dll
+opclib.dll: opclib.obj opclib_w.obj
+	link /dll opclib.obj opclib_w.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:opclib.def
+
+connpoint.cpp: gen_connpoint.lua
+	$(LUA) -l luarocks.require gen_connpoint.lua
+
+connpoint.obj: connpoint.cpp
+	cl /c /W3 /D_CRT_SECURE_NO_WARNINGS /I$(LUA_INCLUDE_DIR) connpoint.cpp
+
+connpoint.dll: connpoint.obj
+	link /dll connpoint.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:connpoint.def
+
+all: comgen.dll rectpointlib.dll opclib.dll connpoint.dll
 
 clean:
 	del *.dll *.obj *.lib *.exp rectpointlib.* opclib.*

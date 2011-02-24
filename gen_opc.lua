@@ -18,6 +18,14 @@ local OPCDATASOURCE = {
   }
 }
 
+local HRESULT = {
+  name = "HRESULT",
+  fields = {
+    { name = "S_OK", value = 0 },
+    { name = "S_FALSE", value = 1 }
+  }
+}
+
 local OPCITEMSTATE = types.struct("OPCITEMSTATE", {
   { type = types.dword, name = "hClient" },
   { type = FILETIME, name = "ftTimeStamp" },
@@ -176,14 +184,72 @@ local IOPCItemIO = {
   }
 }
 
+local IOPCDataCallback = {
+  name = "IOPCDataCallback",
+  iid = "{39C13A70-011E-11D0-9675-0020AFD8ADB3}",
+  parent = IUnknown,
+  methods = {
+    {
+      name = "OnDataChange",
+      parameters = {
+        { type = types.dword, attributes = { ["in"] = true }, name = "dwTransid" },
+        { type = types.dword, attributes = { ["in"] = true }, name = "hGroup" },
+        { type = types.enum("HRESULT"), attributes = { ["in"] = true }, name = "hrMasterquality" },
+        { type = types.enum("HRESULT"), attributes = { ["in"] = true }, name = "hrMastererror" },
+        { type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
+        { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "phClientItems" },
+        { type = types.array(types.variant), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pvValues" },
+        { type = types.array(types.word), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pwQualities" },
+        { type = types.array(FILETIME), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pftTimeStamps" },
+    	{ type = types.array(types.hresult), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pErrors" },
+      }
+    },
+    {
+      name = "OnReadComplete",
+      parameters = {
+        { type = types.dword, attributes = { ["in"] = true }, name = "dwTransid" },
+        { type = types.dword, attributes = { ["in"] = true }, name = "hGroup" },
+        { type = types.enum("HRESULT"), attributes = { ["in"] = true }, name = "hrMasterquality" },
+        { type = types.enum("HRESULT"), attributes = { ["in"] = true }, name = "hrMastererror" },
+        { type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
+        { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "phClientItems" },
+        { type = types.array(types.variant), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pvValues" },
+        { type = types.array(types.word), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pwQualities" },
+        { type = types.array(FILETIME), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pftTimeStamps" },
+    	{ type = types.array(types.hresult), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pErrors" },
+      }
+    },
+    {
+      name = "OnWriteComplete",
+      parameters = {
+        { type = types.dword, attributes = { ["in"] = true }, name = "dwTransid" },
+        { type = types.dword, attributes = { ["in"] = true }, name = "hGroup" },
+        { type = types.enum("HRESULT"), attributes = { ["in"] = true }, name = "hrMastererror" },
+        { type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
+        { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "phClienthandles" },
+    	{ type = types.array(types.hresult), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pErrors" },
+      }
+    },
+    {
+      name = "OnCancelComplete",
+      parameters = {
+        { type = types.dword, attributes = { ["in"] = true }, name = "dwTransid" },
+        { type = types.dword, attributes = { ["in"] = true }, name = "hGroup" },
+      }
+    }
+  }
+}
+
 local opcda = {
   modname = "opclib",
   header = "opcda",
   interfaces = { IOPCServer, IOPCSyncIO, IOPCItemMgt, IOPCItemIO },
-  enums = { OPCDATASOURCE, types.vartype }
+  wrappers = { DataCallback = { IOPCDataCallback } },
+  enums = { OPCDATASOURCE, HRESULT, types.vartype }
 }
 
-local source, def = generator.compile(opcda)
+local source, def, wrap = generator.compile(opcda)
 
 generator.writefile("opclib.cpp", source)
 generator.writefile("opclib.def", def)
+generator.writefile("opclib_w.cpp", wrap)
