@@ -1,13 +1,14 @@
 
 require "comgen"
 require "opclib"
+require "connpoint"
 
 local srv = comgen.CreateInstance("Matrikon.OPC.Simulation.1", opclib.IOPCServer)
-local hgrp, rate, mgt = srv:AddGroup("Group1", false, 0, 0, 0, opclib.IOPCItemMgt)
+local hgrp, rate, mgt = srv:AddGroup("Group1", true, 0, 0, 0, opclib.IOPCItemMgt)
 print("Rate: ", rate)
 local result, err = mgt:AddItems(3, { { szAccessPath = "",
                                         szItemID = "Random.Real4",
-                                        bActive = false,
+                                        bActive = true,
                                         hClient = 1,
                                         dwBlobSize = 0,
                                         pBlob = {},
@@ -15,7 +16,7 @@ local result, err = mgt:AddItems(3, { { szAccessPath = "",
                                         wReserved = 0 },
                                     { szAccessPath = "",
                                         szItemID = "Random.Real8",
-                                        bActive = false,
+                                        bActive = true,
                                         hClient = 1,
                                         dwBlobSize = 0,
                                         pBlob = {},
@@ -46,3 +47,37 @@ print(err[1])
 local values, quals, ts, err = itemio:Read(3, { "Random.Real4", "Random.Real8", "Bucket Brigade.Real4" }, { 0, 0, 0 })
 print(values[1], values[2], values[3])
 print(quals[1], quals[2], quals[3])
+
+local cpc = mgt:QueryInterface(connpoint.IConnectionPointContainer)
+local cp = cpc:FindConnectionPoint(opclib.IOPCDataCallback)
+
+local cb = {}
+
+function cb:OnDataChange(dwTransid, hGroup, hrMasterquality, hrMastererror, dwCount, phClientItems, pvValues, pwQualities, pftTimeStamps, pErrors)
+  print("data change")
+  for _, item in ipairs(pvValues) do
+    print(item)
+  end
+end
+
+function cb:OnReadComplete(dwTransid, hGroup, hrMasterquality, hrMastererror, dwCount, phClientItems, pvValues, pwQualities, pftTimeStamps, pErrors)
+  print("read complete")
+  for _, item in ipairs(phClientItems) do
+    print(item)
+  end
+end
+
+function cb:OnWriteComplete(dwTransid, hGroup, hrMasterquality, hrMastererror, dwCount, phClientItems, pvValues, pwQualities, pftTimeStamps, pErrors)
+  print("write complete")
+end
+
+function cb:OnCancelComplete(dwTransid, hGroup)
+  print("cancel complete")
+end
+
+local wrap = opclib.DataCallback(cb)
+local cookie = cp:Advise(wrap.__interfaces.IOPCDataCallback)
+
+while comgen.MessageStep() do
+  print("step")
+end

@@ -187,13 +187,43 @@ static int comgen_createinstance(lua_State *L) {
   }
 }
 
+int comgen_messageloop(lua_State *L) {
+  MSG msg;
+  BOOL bRet;
+  while( (bRet = GetMessage( &msg, NULL, 0, 0 )) != 0) { 
+    if (bRet == -1) {
+      break;
+    } else {
+      TranslateMessage(&msg); 
+      DispatchMessage(&msg); 
+    }
+  }
+  return 0;
+}
+
+int comgen_messagestep(lua_State *L) {
+  MSG msg;
+  BOOL bRet = GetMessage( &msg, NULL, 0, 0 );
+  if (bRet == -1 || bRet == 0) {
+  	lua_pushboolean(L, 0);
+    return 1;
+  } else {
+    TranslateMessage(&msg); 
+    DispatchMessage(&msg);
+    lua_pushboolean(L, 1);
+    return 1;
+  }
+}
+
 static luaL_Reg comgen_functions[] = {
   { "CreateInstance", comgen_createinstance },
+  { "MessageLoop", comgen_messageloop },
+  { "MessageStep", comgen_messagestep },
   { NULL, NULL }
 };
 
 extern "C" int luaopen_comgen(lua_State *L) {
-  HRESULT hr = CoInitialize(0);
+  HRESULT hr = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
   if(SUCCEEDED(hr)) {
     lua_newtable(L);
     lua_setfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");

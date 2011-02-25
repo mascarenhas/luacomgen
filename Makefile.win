@@ -10,7 +10,7 @@ comgen.obj: comgen.cpp
 	cl /c /I$(LUA_INCLUDE_DIR) comgen.cpp
 
 comgen.dll: comgen.obj
-	link /dll comgen.obj $(LUA_LIB) $(OLE_LIB) /def:comgen.def
+	link /dll comgen.obj $(LUA_LIB) $(OLE_LIB) user32.lib /def:comgen.def
 
 rectpointlib.cpp: gen_rectpoint.lua
 	$(LUA) -l luarocks.require gen_rectpoint.lua

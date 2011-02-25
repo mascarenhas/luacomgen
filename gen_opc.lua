@@ -243,7 +243,7 @@ local IOPCDataCallback = {
 local opcda = {
   modname = "opclib",
   header = "opcda",
-  interfaces = { IOPCServer, IOPCSyncIO, IOPCItemMgt, IOPCItemIO },
+  interfaces = { IOPCServer, IOPCSyncIO, IOPCItemMgt, IOPCItemIO, IOPCDataCallback },
   wrappers = { DataCallback = { IOPCDataCallback } },
   enums = { OPCDATASOURCE, HRESULT, types.vartype }
 }
