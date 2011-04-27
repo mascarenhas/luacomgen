@@ -35,7 +35,7 @@ local template_init_struct = cosmo.compile[=[
 ]=]
 
 local template_set_struct = cosmo.compile[=[
-  int __pos_$(strip(stkidx));
+  { int __pos_$(strip(stkidx));
   $fields[[
     $if{set}[[
       lua_getfield(L, $stkidx, "$name");
@@ -43,7 +43,7 @@ local template_set_struct = cosmo.compile[=[
       $set{ "(" .. var..")."..name, "__pos_" .. strip(stkidx), type, type.attributes }
       lua_pop(L, 1);
     ]]
-  ]]
+  ]] }
 ]=]
 
 local template_push_struct = cosmo.compile[=[
@@ -62,7 +62,7 @@ local template_clear_struct = cosmo.compile[=[
 
 local template_set_array = cosmo.compile[=[
   $if{set}[[
-    int __pos_$(strip(stkidx));
+    { int __pos_$(strip(stkidx));
     if(lua_objlen(L, $stkidx) != $size)
       luaL_error(L, "array size does not match, expected: %i, actual: %i", $size, lua_objlen(L, $stkidx));
     $var = ($ctype *)CoTaskMemAlloc($size * sizeof($ctype));
@@ -72,8 +72,8 @@ local template_set_array = cosmo.compile[=[
       $if{init}[[$init{ var .. "[" .. idx .. "]", type, type.attributes }]]
       $set{ var .. "[" .. idx .. "]", "__pos_" .. strip(stkidx), type, type.attributes }
       lua_pop(L, 1);
-    }
-  ]]
+    } }
+  ]] 
 ]=]
 
 local template_push_array = cosmo.compile[=[
@@ -130,24 +130,24 @@ local template_push_safearray = cosmo.compile[=[
 ]=]
 
 local template_set_refiid = cosmo.compile[=[
-  size_t __$(var)_size;
-  const char *__$(var)_siid = lua_tolstring(L, $stkidx, &__$(var)_size);
-  if(__$(var)_size >= GUID_SIZE) {
+  size_t __$(strip(var))_size;
+  const char *__$(strip(var))_siid = lua_tolstring(L, $stkidx, &__$(strip(var))_size);
+  if(__$(strip(var))_size >= GUID_SIZE) {
     luaL_error(L, "invalid IID: too long!");
   }
-  wchar_t __$(var)_wsiid[GUID_SIZE];
-  mbstowcs(__$(var)_wsiid, __$(var)_siid, GUID_SIZE);
-  __hr = IIDFromString(__$(var)_wsiid, &$var);
+  wchar_t __$(strip(var))_wsiid[GUID_SIZE];
+  mbstowcs(__$(strip(var))_wsiid, __$(strip(var))_siid, GUID_SIZE);
+  __hr = IIDFromString(__$(strip(var))_wsiid, &$var);
   if(!SUCCEEDED(__hr)) comgen_error(L, __hr);
 ]=]
 
 local template_push_refiid = cosmo.compile[=[
-  char __$(var)_p_siid[GUID_SIZE];
-  wchar_t __$(var)_p_wsiid[GUID_SIZE];
-  __hr = StringFromIID($var, (LPOLESTR *)__$(var)_p_wsiid);
+  char __$(strip(var))_p_siid[GUID_SIZE];
+  wchar_t __$(strip(var))_p_wsiid[GUID_SIZE];
+  __hr = StringFromIID($var, (LPOLESTR *)__$(strip(var))_p_wsiid);
   if(!SUCCEEDED(__hr)) comgen_error(L, __hr);
-  wcstombs(__$(var)_p_siid, __$(var)_p_wsiid, GUID_SIZE);
-  lua_pushlstring(L, __$(var)_p_siid, GUID_SIZE);
+  wcstombs(__$(strip(var))_p_siid, __$(strip(var))_p_wsiid, GUID_SIZE);
+  lua_pushlstring(L, __$(strip(var))_p_siid, GUID_SIZE);
 ]=]
 
 local counter
@@ -305,7 +305,7 @@ comtypes = {
                                        ["if"] = cosmo.cif, 
                                        strip = function (s) 
                                                  if not tonumber(s) then 
-                                                   return s:gsub(" ", "_"):gsub("%+", "__")
+                                                   return s:gsub(" ", "_"):gsub("%+", "__"):gsub("%[","__"):gsub("%]","__")
                                                  else
                                                    return s
                                                  end
@@ -347,7 +347,7 @@ comtypes = {
             return template_set_struct{ fields = fields, stkidx = args[2], var = args[1], ["if"] = cosmo.cif, 
             strip = function (s) 
                       if not tonumber(s) then 
-                        return s:gsub(" ", "_"):gsub("%+", "__")
+                        return s:gsub(" ", "_"):gsub("%+", "__"):gsub("%[","__"):gsub("%]","__")
                       else
                         return s
                       end
@@ -405,6 +405,7 @@ comtypes = {
   },
   tstring = {
     ctype = function (type, attr)
+              if attr.ctype then return attr.ctype end
               if attr["in"] and not attr.out and not attr.ref then
                 return "LPCTSTR"
               else
@@ -423,6 +424,7 @@ comtypes = {
   },
   wstring = {
     ctype = function (type, attr)
+              if attr.ctype then return attr.ctype end
               if attr["in"] and not attr.out and not attr.ref then
                 return "LPCWSTR"
               else
@@ -468,6 +470,7 @@ comtypes = {
   },
   string = {
     ctype = function (type, attr)
+              if attr.ctype then return attr.ctype end
               if attr["in"] and not attr.out and not attr.ref then
                 return "LPCSTR"
               else
@@ -505,10 +508,24 @@ comtypes = {
               return "IID"
             end,
     set = function (args)
-            return template_set_refiid{ stkidx = args[2], var = args[1] }
+            return template_set_refiid{ stkidx = args[2], var = args[1],
+                                        strip = function (s) 
+                                        	      if not tonumber(s) then 
+                                                    return s:gsub(" ", "_"):gsub("%+", "__"):gsub("%[","__"):gsub("%]","__")
+                                                  else
+                                                    return s
+                                                  end
+                                                end }
           end,
     push = function (args)
-             return template_push_refiid{ var = args[1] }
+             return template_push_refiid{ var = args[1],
+                                          strip = function (s) 
+                                                    if not tonumber(s) then 
+                                                      return s:gsub(" ", "_"):gsub("%+", "__"):gsub("%[","__"):gsub("%]","__")
+                                                    else
+                                                      return s
+                                                    end
+                                                  end }
            end
   },
   hresult = {
