@@ -51,13 +51,13 @@ print(quals[1], quals[2], quals[3])
 
 local prop = srv:QueryInterface(opclib.IOPCItemProperties)
 assert(prop)
-local count, ids, descs, types = prop:QueryAvailableProperties("Random.Real8")
+local count, ids, descs, types = prop:QueryAvailableProperties("Bucket Brigade.Real8")
 print("===== Random.Real8 properties")
 for i = 1, count do
   print(ids[i], descs[i], types[i])
 end
 print("===== Random.Real8 properties")
-local data, err = prop:GetItemProperties("Random.Real8", 1, { 2 })
+local data, err = prop:GetItemProperties("Bucket Brigade.Real8", 1, { 2 })
 print(data[1], err[1])
 
 local cpc = mgt:QueryInterface(connpoint.IConnectionPointContainer)

@@ -154,8 +154,8 @@ static int comgen_createinstance(lua_State *L) {
 	COSERVERINFO si;
 	size_t sizehost;
 	const char *host = luaL_checklstring(L, 3, &sizehost);
-	wchar_t *wshost = new wchar_t[sizehost];
-	mbstowcs(wshost, host, sizehost);
+	wchar_t *wshost = new wchar_t[sizehost+1];
+	mbstowcs(wshost, host, sizehost+1);
 	si.dwReserved1 = 0;
 	si.pwszName = wshost;
 	si.pAuthInfo = NULL;
