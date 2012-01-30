@@ -4,8 +4,6 @@ return [==[
 #include <stdio.h>
 #include <atlbase.h>
 
-CComModule _Module;
-
 #include <atlcom.h>
 #include "$(header).h"
 
