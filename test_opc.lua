@@ -90,7 +90,7 @@ function cb:OnCancelComplete(dwTransid, hGroup)
 end
 
 local wrap1 = opclib.DataCallback(cb)
---local cookie = cp:Advise(wrap1.__interfaces.IOPCDataCallback)
+local cookie = cp:Advise(wrap1.__interfaces.IOPCDataCallback)
 
 local aesrv = srv:QueryInterface(opcae.IOPCEventServer)
 local cpc, time, max = aesrv:CreateEventSubscription(true, 0, 0, 100, connpoint.IConnectionPointContainer)

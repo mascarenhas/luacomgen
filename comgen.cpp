@@ -203,16 +203,19 @@ int comgen_messageloop(lua_State *L) {
 
 int comgen_messagestep(lua_State *L) {
   MSG msg;
-  BOOL bRet = GetMessage( &msg, NULL, 0, 0 );
-  if (bRet == -1 || bRet == 0) {
-  	lua_pushboolean(L, 0);
-    return 1;
-  } else {
-    TranslateMessage(&msg); 
-    DispatchMessage(&msg);
-    lua_pushboolean(L, 1);
-    return 1;
+  int flag = 0;
+  while(GetQueueStatus(QS_ALLINPUT)) {
+    BOOL bRet = GetMessage(&msg, NULL, 0, 0);
+    if (bRet == -1 || bRet == 0) {
+      break;
+    } else {
+      flag = 1;
+      TranslateMessage(&msg); 
+      DispatchMessage(&msg); 
+    }
   }
+  lua_pushboolean(L, flag);
+  return 1;
 }
 
 static luaL_Reg comgen_functions[] = {
