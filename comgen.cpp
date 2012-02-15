@@ -4,6 +4,11 @@
 #include <objbase.h>
 #include <unknwn.h>
 
+#ifdef ALLINONE
+#include <atlbase.h>
+CComModule _Module;
+#endif
+
 extern "C" {
   #include "lua.h"
   #include "lualib.h"

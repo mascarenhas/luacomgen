@@ -4,6 +4,12 @@ return [==[
 #include <stdio.h>
 #include <atlbase.h>
 
+#ifdef ALLINONE
+extern CComModule _Module;
+#else
+CComModule _Module;
+#endif
+
 #include <atlcom.h>
 #include "$(header).h"
 
@@ -532,8 +538,8 @@ protected:
 class $(wname)Impl : public CComObject<$wname> {
 public:
  $(wname)Impl(lua_State *L, int me) {
- 	this->L = L;
- 	this->me = me;
+        this->L = L;
+        this->me = me;
  }
  ~$(wname)Impl() {
    luaL_unref(this->L, LUA_REGISTRYINDEX, this->me);
