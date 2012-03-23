@@ -38,8 +38,8 @@ vals[#vals+1] = "The item definition does not conform to the server's syntax."
 
 
 
-local opc = require "opc"
-local bridge = assert(opc.open("Matrikon.OPC.Simulation", nil, nil, true))
+local opc = require "mpa.bridge.opc"
+local bridge = assert(opc.open("Matrikon.OPC.Simulation", nil, nil, true, true, "foo", "bar"))
 for i = 1, 100 do
 
         local write = assert(bridge:setblock(tags, vals))

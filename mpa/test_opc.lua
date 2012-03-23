@@ -1,11 +1,11 @@
+local comgen = require "comgen"
+local opc = require "mpa.bridge.opc"
+local socket = require "socket.core"
 
-require "opc"
-require "socket"
-
-local srv = opc.open("Matrikon.OPC.Simulation.1", nil, true, true)
+local srv = opc.open("Matrikon.OPC.Simulation.1", nil, "statistics", "OPC 2.0", "async")
 local tags = { "Random.Real4", "Random.Real8", "Bucket Brigade.Real4" }
 
-comgen.MessageStep()
+--comgen.MessageStep()
 
 local tab = srv:getblock(tags)
 for _, tag in ipairs(tab) do
@@ -26,7 +26,7 @@ for _, tag in ipairs(tags) do
   print(srv:get(tag))
 end
 
-comgen.MessageStep()
+--comgen.MessageStep()
 
 for _, tag in ipairs(tags) do
   print(srv:get(tag))
@@ -36,7 +36,7 @@ srv:setblock({ "Bucket Brigade.Real4" }, { 0 })
 
 socket.sleep(2)
 
-comgen.MessageStep()
+--comgen.MessageStep()
 
 local tab = srv:getblock(tags)
 for _, tag in ipairs(tab) do
