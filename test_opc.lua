@@ -3,6 +3,7 @@ require "comgen"
 require "opclib"
 require "connpoint"
 require "opcae"
+require "opcsec"
 
 local srv = comgen.CreateInstance("Matrikon.OPC.Simulation.1", opclib.IOPCServer)
 local hgrp, rate, mgt = srv:AddGroup("Group1", true, 0, 0, 0, opclib.IOPCItemMgt)
@@ -116,6 +117,10 @@ end
 local wrap2 = opcae.EventSink(es)
 local cookie = cp:Advise(wrap2.__interfaces.IOPCEventSink)
 
-while comgen.MessageStep() do
-  print("step")
-end
+--while comgen.MessageStep() do
+--  print("step")
+--end
+
+local sec = srv:QueryInterface(opcsec.IOPCSecurityPrivate)
+print(sec:IsAvailablePriv())
+print(sec:Logon("foo", "bar"))

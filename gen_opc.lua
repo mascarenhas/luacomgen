@@ -272,6 +272,31 @@ local IOPCDataCallback = {
   }
 }
 
+local IOPCSecurityPrivate = {
+  name = "IOPCSecurityPrivate",
+  iid = "{7AA83A02-6C77-11D3-84F9-00008630A38B}",
+  parent = IUnknown,
+  methods = {
+    {
+      name = "IsAvailablePriv",
+      parameters = {
+        { type = types.bool, attributes = { out = true }, name = "pbAvailable" }
+      }
+    },
+    {
+      name = "Logon",
+      parameters = {
+        { type = types.wstring, attributes = { ["in"] = true }, name = "szUserID" },
+        { type = types.wstring, attributes = { ["in"] = true }, name = "szPassword" }
+      }
+    },
+    {
+      name = "Logoff",
+      parameters = {}
+    }
+  }
+}
+
 local OPCEVENTSERVERSTATE = {
   name = "OPCEVENTSERVERSTATE",
   fields = {
@@ -509,6 +534,14 @@ local opcae = {
   enums = { OPCEVENTSERVERSTATE, HRESULT, types.vartype }
 }
 
+local opcsec = {
+  modname = "opcsec",
+  header = "opcsec",
+  interfaces = { IOPCSecurityPrivate },
+  wrappers = {},
+  enums = { HRESULT }
+}
+
 local source, def, wrap = generator.compile(opcda)
 
 generator.writefile("opclib.cpp", source)
@@ -520,3 +553,8 @@ local source, def, wrap = generator.compile(opcae)
 generator.writefile("opcae.cpp", source)
 generator.writefile("opcae.def", def)
 generator.writefile("opcae_w.cpp", wrap)
+
+local source, def, wrap = generator.compile(opcsec)
+
+generator.writefile("opcsec.cpp", source)
+generator.writefile("opcsec.def", def)

@@ -2,6 +2,7 @@
 require "comgen"
 require "opclib"
 require "connpoint"
+pcall(require, "opcsec")
 
 module("opc", package.seeall)
 
@@ -14,9 +15,27 @@ methods_v2.__index = methods_v2
 local methods_cb = {}
 methods_cb.__index = methods_cb
 
-function open(server, host, use_v2, async)
+function open(server, host, use_v2, async, user, pass)
+  if type(server) == "table" then
+    host = server.host
+    use_v2 = server.use_v2
+    async = server.async
+    user = server.user
+    pass = server.pass
+    server = server.server
+  end
   local ok, server = pcall(comgen.CreateInstance, server, opclib.IOPCServer, host)
   if not ok then return nil, "server not found, com error: " .. server end
+  if user then
+    local ok, sec = pcall(server.QueryInterface, server, opcsec.IOPCSecurityPrivate)
+    if not ok then return nil, "OPC Security interface not available: " .. server end
+    if not sec:IsAvailablePriv() then
+      return nil, "OPC Security interface not available: " .. server
+    end
+    comgen.RaisePrivacy(sec)
+    local ok = pcall(sec.Logon, sec, user, pass)
+    if not ok then return nil, "login to server failed: " .. server end
+  end
   local ok, itemio = pcall(server.QueryInterface, server, opclib.IOPCItemIO)
   if ok and (not use_v2) and (not async) then
     return setmetatable({ server = server, itemio = itemio },

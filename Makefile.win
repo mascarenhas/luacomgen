@@ -45,6 +45,15 @@ opcae_w.obj: opcae_w.cpp
 opcae.dll: opcae.obj opcae_w.obj
 	link /dll opcae.obj opcae_w.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:opcae.def
 
+opcsec.cpp: gen_opc.lua
+	$(LUA) -l luarocks.require gen_opc.lua
+
+opcsec.obj: opcsec.cpp
+	cl /c /W3 /D_CRT_SECURE_NO_WARNINGS /I$(LUA_INCLUDE_DIR) /Iopc opcsec.cpp
+
+opcsec.dll: opcsec.obj
+	link /dll opcsec.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:opcsec.def
+
 connpoint.cpp: gen_connpoint.lua
 	$(LUA) -l luarocks.require gen_connpoint.lua
 
@@ -54,7 +63,7 @@ connpoint.obj: connpoint.cpp
 connpoint.dll: connpoint.obj
 	link /dll connpoint.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:connpoint.def
 
-all: comgen.dll rectpointlib.dll opclib.dll connpoint.dll opcae.dll
+all: comgen.dll rectpointlib.dll opclib.dll connpoint.dll opcae.dll opcsec.dll
 
 clean:
 	del *.dll *.obj *.lib *.exp rectpointlib.* opclib.*

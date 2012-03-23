@@ -223,10 +223,21 @@ int comgen_messagestep(lua_State *L) {
   return 1;
 }
 
+int comgen_raiseprivacy(lua_State *L) {
+  IUnknown *p = comgen_checkinterface(L, 1);
+  HRESULT hr = CoSetProxyBlanket(p, RPC_C_AUTHN_DEFAULT, RPC_C_AUTHN_DEFAULT, NULL,
+                                 RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_DEFAULT,
+                                 NULL, EOAC_DEFAULT);
+  if(!SUCCEEDED(hr))
+    return comgen_error(L, hr);
+  return 1;
+}
+
 static luaL_Reg comgen_functions[] = {
   { "CreateInstance", comgen_createinstance },
   { "MessageLoop", comgen_messageloop },
   { "MessageStep", comgen_messagestep },
+  { "RaisePrivacy", comgen_raiseprivacy },
   { NULL, NULL }
 };
 
