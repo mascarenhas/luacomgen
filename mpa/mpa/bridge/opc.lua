@@ -27,6 +27,28 @@ local classof = oo.classof
 module("mpa.bridge.opc", package.seeall)
 
 --------------------------------------------------------------------------------
+-- Functions to convert from Windows FILETIME to LuaSocket time ----------------
+-- Thanks Diego Nehab! ---------------------------------------------------------
+
+local function stime2filetime(t)
+  local ft = {}
+  -- convert to Windows Epoch (time since January 1, 1601)
+  t = t + 11644473600.0
+  -- High part (t in 0.1 usec DIV 2^32)
+  ft.dwHighDateTime = math.floor(t * (1.0e7 / 4294967296))
+  -- Low part (t in 0.1 usec MOD 2^32)
+  ft.dwLowDateTime = math.floor(t*1.0e7) % 4294967296
+  return ft
+end
+
+local function filetime2stime(ft)
+  local t  = ft.dwLowDateTime/1.0e7 + ft.dwHighDateTime*(4294967296/1.0e7)
+  -- convert to Unix Epoch time (time since January 1, 1970 (UTC))
+  t = t - 11644473600.0
+  return t
+end
+
+--------------------------------------------------------------------------------
 -- Support for OPC Data Access version 3 ---------------------------------------
 
 DataAccess_v3 = class()
@@ -42,16 +64,21 @@ end
 function DataAccess_v3:get(tag)
         local values, quals, ts, err = self.itemio:Read(1, { tag }, { 0 })
         if err[1] == "OK" then
-                return values[1], quals[1]
+                return values[1], quals[1], filetime2stime(ts[1])
         else
                 return nil, self:errmsg(err[1])
         end
 end
-function DataAccess_v3:set(tag, val, qual)
+
+function DataAccess_v3:set(tag, val, qual, ts)
         local vqt = { vDataValue = val, ftTimeStamp = {} }
         if qual then
                 vqt.bQualitySpecified = true
                 vqt.wQuality = qual
+        end
+        if ts then
+                vqt.bTimeStampSpecified = true
+                vqt.ftTimeStamp = stime2filetime(ts)
         end
         local err = self.itemio:WriteVQT(1, { tag }, { vqt })
         if err[1] == "OK" then
@@ -68,7 +95,7 @@ function DataAccess_v3:getblock(tags)
         local res = {}
         for i = 1, #tags do
                 if err[i] == "OK" then
-                        res[i] = { success = true, value = values[i], quality = quals[i] }
+                        res[i] = { success = true, value = values[i], quality = quals[i], timestamp = filetime2stime(ts[i]) }
                 else
                         res[i] = { success = false, value = self:errmsg(err[i]) }
                 end
@@ -76,14 +103,19 @@ function DataAccess_v3:getblock(tags)
         return res
 end
 
-function DataAccess_v3:setblock(tags, vals, quals)
+function DataAccess_v3:setblock(tags, vals, quals, ts)
         quals = quals or {}
+        ts = ts or {}
         local vqts = {}
         for i = 1, #tags do
                 vqts[i] = { vDataValue = vals[i], ftTimeStamp = {} }
                 if quals[i] then
                         vqts[i].bQualitySpecified = true
                         vqts[i].wQuality = quals[i]
+                end
+                if ts[i] then
+                        vqts[i].bTimeStampSpecified = true
+                        vqts[i].ftTimeStamp = stime2filetime(ts[i])
                 end
         end
         local err = self.itemio:WriteVQT(#tags, tags, vqts)
@@ -118,7 +150,7 @@ function DataAccess_v2:get(tag)
         if self.items[tag] then
                 local result, err = self.syncio:Read("OPC_DS_DEVICE", 1, { self.items[tag] })
                 if err[1] == "OK" then
-                        return result[1].vDataValue, result[1].wQuality
+                        return result[1].vDataValue, result[1].wQuality, filetime2stime(result[1].ftTimeStamp)
                 else
                         return nil, self:errmsg(err[1])
                 end
@@ -137,7 +169,7 @@ function DataAccess_v2:get(tag)
                         self.items[tag] = result[1].hServer
                         result, err = self.syncio:Read("OPC_DS_DEVICE", 1, { result[1].hServer })
                         if err[1] == "OK" then
-                                return result[1].vDataValue, result[1].wQuality
+                                return result[1].vDataValue, result[1].wQuality, filetime2stime(result[1].ftTimeStamp)
                         end
                 end
                 return nil, self:errmsg(err[1])
@@ -205,7 +237,9 @@ function DataAccess_v2:getblock(tags)
         for _, tag in ipairs(tags) do
                 if self.items[tag] then
                         if err[i] == "OK" then
-                                res[#res + 1] = { success = true, value = result[i].vDataValue, quality = result[i].wQuality }
+                                res[#res + 1] = { success = true, value = result[i].vDataValue,
+                                                  quality = result[i].wQuality,
+                                                  timestamp = filetime2stime(result[i].ftTimeStamp) }
                         else
                                 res[#res + 1] = { success = false, value = self:errmsg(err[i]) }
                         end
@@ -288,13 +322,15 @@ function DataAccess_v2_Callback:OnDataChange(dwTransid, hGroup, hrMasterquality,
                         if item then
                                 item.result = pvValues[i]
                                 item.quality = pwQualities[i]
+                                item.timestamp = filetime2stime(pftTimeStamps[i])
                                 item.err = "OK"
                         end
                 else
                         local item = self.cache[handle]
                         if item then
                                 item.result = nil
-                                item.quality = pwQualities[i]
+                                item.quality = nil
+                                item.timestamp = nil
                                 item.err = pErrors[i]
                         end
                 end
@@ -336,7 +372,7 @@ function DataAccess_v2_Async:get(tag)
         if self.items[tag] then
                 local item = self.cache[self.items[tag]]
                 if item.err == "OK" then
-                        return item.result, item.quality
+                        return item.result, item.quality, item.timestamp
                 else
                         return nil, self:errmsg(item.err)
                 end
@@ -360,10 +396,11 @@ function DataAccess_v2_Async:get(tag)
                                 local item = {
                                         result = result[1].vDataValue,
                                         quality = result[1].wQuality,
+                                        timestamp = filetime2stime(result[1].ftTimeStamp),
                                         err = "OK",
                                 }
                                 self.cache[handle] = item
-                                return item.result, item.quality
+                                return item.result, item.quality, item.timestamp
                         else
                                 local item = { err = err[1] }
                                 self.cache[handle] = item
@@ -444,7 +481,8 @@ function DataAccess_v2_Async:getblock(tags)
                 local result, err = self.syncio:Read("OPC_DS_DEVICE", #ids, ids)
                 for i, id in ipairs(ids) do
                         if err[i] == "OK" then
-                                self.cache[handles[i]] = { result = result[i].vDataValue, quality = result[i].wQuality, err = "OK" }
+                                self.cache[handles[i]] = { result = result[i].vDataValue, quality = result[i].wQuality,
+                                                           err = "OK", timestamp = filetime2stime(result[i].ftTimeStamp) }
                         else
                                 self.cache[handles[i]] = { err = err[i] }
                         end
@@ -455,7 +493,7 @@ function DataAccess_v2_Async:getblock(tags)
                 if self.items[tag] then
                         local item = self.cache[self.items[tag]]
                         if item.err == "OK" then
-                                res[#res + 1] = { success = true, value = item.result, quality = item.quality }
+                                res[#res + 1] = { success = true, value = item.result, quality = item.quality, timestamp = item.timestamp }
                         else
                                 res[#res + 1] = { success = false, value = self:errmsg(item.err) }
                         end

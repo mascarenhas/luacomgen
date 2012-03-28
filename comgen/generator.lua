@@ -73,7 +73,7 @@ local template_set_array = cosmo.compile[=[
       $set{ var .. "[" .. idx .. "]", "__pos_" .. strip(stkidx), type, type.attributes }
       lua_pop(L, 1);
     } }
-  ]] 
+  ]]
 ]=]
 
 local template_push_array = cosmo.compile[=[
@@ -254,7 +254,7 @@ comtypes = {
             return args[1] .. " = (unsigned long)lua_tointeger(L, " .. args[2] .. ");"
           end,
     push = function (args)
-             return "lua_pushinteger(L, " .. args[1] .. ");"
+             return "lua_pushnumber(L, (double)" .. args[1] .. ");"
            end,
   },
   float = {
@@ -302,9 +302,9 @@ comtypes = {
             return template_set_array{ stkidx = args[2], var = args[1], type = elem_type, idx = "__arr_idx_" .. counter(),
                                        set = comtypes[elem_type.name].set, size = (struct or "") .. args[4].size_is,
                                        ctype = comtypes[elem_type.name].ctype(elem_type, args[4]), init = comtypes[elem_type.name].init,
-                                       ["if"] = cosmo.cif, 
-                                       strip = function (s) 
-                                                 if not tonumber(s) then 
+                                       ["if"] = cosmo.cif,
+                                       strip = function (s)
+                                                 if not tonumber(s) then
                                                    return s:gsub(" ", "_"):gsub("%+", "__"):gsub("%[","__"):gsub("%]","__")
                                                  else
                                                    return s
@@ -344,9 +344,9 @@ comtypes = {
             for _, field in ipairs(type.fields) do
               fields[#fields+1] = { type = field.type, set = comtypes[field.type.name].set, name = field.name }
             end
-            return template_set_struct{ fields = fields, stkidx = args[2], var = args[1], ["if"] = cosmo.cif, 
-            strip = function (s) 
-                      if not tonumber(s) then 
+            return template_set_struct{ fields = fields, stkidx = args[2], var = args[1], ["if"] = cosmo.cif,
+            strip = function (s)
+                      if not tonumber(s) then
                         return s:gsub(" ", "_"):gsub("%+", "__"):gsub("%[","__"):gsub("%]","__")
                       else
                         return s
@@ -509,8 +509,8 @@ comtypes = {
             end,
     set = function (args)
             return template_set_refiid{ stkidx = args[2], var = args[1],
-                                        strip = function (s) 
-                                        	      if not tonumber(s) then 
+                                        strip = function (s)
+                                                      if not tonumber(s) then
                                                     return s:gsub(" ", "_"):gsub("%+", "__"):gsub("%[","__"):gsub("%]","__")
                                                   else
                                                     return s
@@ -519,8 +519,8 @@ comtypes = {
           end,
     push = function (args)
              return template_push_refiid{ var = args[1],
-                                          strip = function (s) 
-                                                    if not tonumber(s) then 
+                                          strip = function (s)
+                                                    if not tonumber(s) then
                                                       return s:gsub(" ", "_"):gsub("%+", "__"):gsub("%[","__"):gsub("%]","__")
                                                     else
                                                       return s
@@ -686,7 +686,7 @@ end
 function _M.compile_wrapper_method(method)
   local mdata = {
     methodname = method.name,
-	cname = method.name,
+        cname = method.name,
     nargs = 0,
     nresults = 0,
     parameters = {}
@@ -711,7 +711,7 @@ function _M.compile_wrapper_method(method)
     if attr.out or attr.retval then
       pos = pos + 1
       pdata.name = "*" .. pdata.name
-	  pdata.init = comtypes[typename].init
+          pdata.init = comtypes[typename].init
       pdata.set = comtypes[typename].set
       mdata.nresults = mdata.nresults + 1
     end
