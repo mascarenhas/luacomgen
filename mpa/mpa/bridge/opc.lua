@@ -415,7 +415,7 @@ function DataAccess_v2_Async:set(tag, val)
         if self.handles[tag] then
                 local err = self.syncio:Write(1, { self.handles[tag] }, { val })
                 if err[1] == "OK" then
-                        self.cache[self.items[tag]] = { result = val, err = "OK" }
+                        self.cache[self.items[tag]] = { result = val, err = "OK", timestamp = socket.gettime(), quality = 192 }
                         return true
                 else
                         self.cache[self.items[tag]] = { err = err[i] }
@@ -540,13 +540,14 @@ function DataAccess_v2_Async:setblock(tags, vals)
         end
         local err = self.syncio:Write(#ids, ids, values)
         local i, errors = 1, {}
+        local now = socket.gettime()
         for j, tag in ipairs(tags) do
                 if self.items[tag] then
                         if err[i] ~= "OK" then
                                 errors[#errors + 1] = { tag = tag, value = self:errmsg(err[i]) }
                                 self.cache[self.items[tag]] = { err = err[i] }
                         else
-                                self.cache[self.items[tag]] = { result = vals[j], err = "OK" }
+                                self.cache[self.items[tag]] = { result = vals[j], err = "OK", timestamp = now, quality = 192 }
                         end
                         i = i + 1
                 else
