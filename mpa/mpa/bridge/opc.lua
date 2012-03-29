@@ -415,7 +415,8 @@ function DataAccess_v2_Async:set(tag, val)
         if self.handles[tag] then
                 local err = self.syncio:Write(1, { self.handles[tag] }, { val })
                 if err[1] == "OK" then
-                        self.cache[self.items[tag]] = { result = val, err = "OK", timestamp = socket.gettime(), quality = 192 }
+                        self.cache[self.items[tag]] = { result = val, err = "OK",
+                                                        timestamp = socket.gettime(), quality = 192 }
                         return true
                 else
                         self.cache[self.items[tag]] = { err = err[i] }
@@ -438,7 +439,8 @@ function DataAccess_v2_Async:set(tag, val)
                         self.handles[tag] = result[1].hServer
                         err = self.syncio:Write(1, { result[1].hServer }, { val })
                         if err[1] == "OK" then
-                                self.cache[handle] = { result = val, err = "OK" }
+                                self.cache[handle] = { result = val, err = "OK",
+                                                       timestamp = socket.gettime(), quality = 192 }
                                 return true
                         else
                                 self.cache[handle] = { err = err[i] }
@@ -547,7 +549,8 @@ function DataAccess_v2_Async:setblock(tags, vals)
                                 errors[#errors + 1] = { tag = tag, value = self:errmsg(err[i]) }
                                 self.cache[self.items[tag]] = { err = err[i] }
                         else
-                                self.cache[self.items[tag]] = { result = vals[j], err = "OK", timestamp = now, quality = 192 }
+                                self.cache[self.items[tag]] = { result = vals[j], err = "OK",
+                                                                timestamp = now, quality = 192 }
                         end
                         i = i + 1
                 else
@@ -562,6 +565,124 @@ function DataAccess_v2_Async:close()
         self.cp:Unadvise(self.cookie)
         self.cp = nil
         self.cb = nil
+end
+
+DataAccess_v3_Async = class({ handle = 1000 }, DataAccess_v2_Async)
+
+function DataAccess_v3_Async:set(tag, val, qual, ts)
+        local vqt = { vDataValue = val, ftTimeStamp = {} }
+        if qual then
+                vqt.bQualitySpecified = true
+                vqt.wQuality = qual
+        end
+        if ts then
+                vqt.bTimeStampSpecified = true
+                vqt.ftTimeStamp = stime2filetime(ts)
+        end
+        if self.handles[tag] then
+                local err = self.itemio:WriteVQT(1, { tag }, { vqt })
+                if err[1] == "OK" then
+                        self.cache[self.items[tag]] = { result = val, err = "OK",
+                                                        timestamp = ts or socket.gettime(), quality = qual or 192 }
+                        return true
+                else
+                        self.cache[self.items[tag]] = { err = err[i] }
+                        return nil, self:errmsg(err[1])
+                end
+        else
+                local handle = self:newhandle()
+                local result, err = self.mgt:AddItems(1, { {
+                        szAccessPath = "",
+                        szItemID = tag,
+                        bActive = true,
+                        hClient = handle,
+                        dwBlobSize = 0,
+                        pBlob = {},
+                        vtRequestedDataType = "VT_EMPTY",
+                        wReserved = 0,
+                } })
+                if err[1] == "OK" then
+                        self.items[tag] = handle
+                        self.handles[tag] = result[1].hServer
+                        err = self.itemio:WriteVQT(1, { tag }, { vqt })
+                        if err[1] == "OK" then
+                                self.cache[handle] = { result = val, err = "OK",
+                                                       timestamp = ts or socket.gettime(), quality = qual or 192 }
+                                return true
+                        else
+                                self.cache[handle] = { err = err[i] }
+                        end
+                end
+                return nil, self:errmsg(err[1])
+        end
+end
+
+function DataAccess_v3_Async:setblock(tags, vals, quals, ts)
+        quals = quals or {}
+        ts = ts or {}
+        local vqts = {}
+        for i = 1, #tags do
+                vqts[i] = { vDataValue = vals[i], ftTimeStamp = {} }
+                if quals[i] then
+                        vqts[i].bQualitySpecified = true
+                        vqts[i].wQuality = quals[i]
+                end
+                if ts[i] then
+                        vqts[i].bTimeStampSpecified = true
+                        vqts[i].ftTimeStamp = stime2filetime(ts[i])
+                end
+        end
+        local new, err_add = {}, {}
+        for _, tag in ipairs(tags) do
+                if not self.items[tag] then
+                        new[#new + 1] = {
+                                szAccessPath = "",
+                                szItemID = tag,
+                                bActive = true,
+                                hClient = self:newhandle(),
+                                dwBlobSize = 0,
+                                pBlob = {},
+                                vtRequestedDataType = "VT_EMPTY",
+                                wReserved = 0,
+                        }
+                end
+        end
+        if #new > 0 then
+                local result, err = self.mgt:AddItems(#new, new)
+                for i, item in ipairs(new) do
+                        if err[i] == "OK" then
+                                self.items[item.szItemID] = new[i].hClient
+                                self.handles[item.szItemID] = result[i].hServer
+                        else
+                                err_add[item.szItemID] = err[i]
+                        end
+                end
+        end
+        local ids, values = {}, {}, {}
+        for i, tag in ipairs(tags) do
+                if self.items[tag] then
+                        ids[#ids + 1] = tag
+                        values[#values + 1] = vqts[i]
+                end
+        end
+        local err = self.itemio:WriteVQT(#ids, ids, values)
+        local i, errors = 1, {}
+        local now = socket.gettime()
+        for j, tag in ipairs(tags) do
+                if self.items[tag] then
+                        if err[i] ~= "OK" then
+                                errors[#errors + 1] = { tag = tag, value = self:errmsg(err[i]) }
+                                self.cache[self.items[tag]] = { err = err[i] }
+                        else
+                                self.cache[self.items[tag]] = { result = vals[j], err = "OK",
+                                                                timestamp = ts[j] or now, quality = quals[j] or 192 }
+                        end
+                        i = i + 1
+                else
+                        errors[#errors + 1] = { tag = tag, value = self:errmsg(err_add[tag]) }
+                end
+        end
+        return errors
 end
 
 --------------------------------------------------------------------------------
@@ -663,12 +784,18 @@ function open(server, host, stats, use_v2, async, user, pass)
           if not ok then return nil, "login to server failed: " .. server end
         end
         local ok, itemio = pcall(server.QueryInterface, server, IOPCItemIO)
-        if ok and (not use_v2) and (not async) then
+        if ok and (not use_v2) then
+          if async then
+                server = DataAccess_v3_Async{ server = server, itemio = itemio }
+          else
                 server = DataAccess_v3{ server = server, itemio = itemio }
-        elseif not async then
-                server = DataAccess_v2{ server = server }
+          end
         else
+          if async then
                 server = DataAccess_v2_Async{ server = server }
+          else
+                server = DataAccess_v2{ server = server }
+          end
         end
         if stats then
                 server.get = wrapped_get

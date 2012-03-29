@@ -35,13 +35,13 @@ for i = 1, #tags/4 do
         vals[4*i-1] = 2^50-1
         vals[4*i  ] = ""
 end
-vals[#vals+1] = "The item definition does not conform to the server's syntax."
---vals[#vals+1] = "The item definition does not exist in the server's address space."
+--vals[#vals+1] = "The item definition does not conform to the server's syntax."
+vals[#vals+1] = "The item definition does not exist in the server's address space."
 
 
 
 local opc = require "mpa.bridge.opc"
-local bridge = assert(opc.open{ server = "Matrikon.OPC.Simulation", stats = true, v2 = false, async = true})
+local bridge = assert(opc.open{ server = "Matrikon.OPC.Simulation", stats = true, use_v2 = false, async = false})
 
 print("SOCKET", socket.gettime())
 print(bridge:get(tags[1]))
@@ -57,7 +57,7 @@ for i = 1, 100 do
         assert(not read[#read].success)
         assert(read[#read].value == vals[#vals])
         -- matrikon simulation does not allow this
-        --bridge:set(tags[1], true, nil, socket.gettime() + 2000)
+        bridge:setblock({tags[1]}, {true}, {100}, {socket.gettime() + 2000})
         for k, v in pairs(read[1]) do print(k, v) end
         for i, tag in ipairs(tags) do
                 if i == #tags then break end
