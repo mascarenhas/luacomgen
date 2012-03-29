@@ -416,7 +416,7 @@ function DataAccess_v2_Async:set(tag, val)
                 local err = self.syncio:Write(1, { self.handles[tag] }, { val })
                 if err[1] == "OK" then
                         self.cache[self.items[tag]] = { result = val, err = "OK",
-                                                        timestamp = socket.gettime(), quality = 192 }
+                                                        timestamp = gettime(), quality = 192 }
                         return true
                 else
                         self.cache[self.items[tag]] = { err = err[i] }
@@ -440,7 +440,7 @@ function DataAccess_v2_Async:set(tag, val)
                         err = self.syncio:Write(1, { result[1].hServer }, { val })
                         if err[1] == "OK" then
                                 self.cache[handle] = { result = val, err = "OK",
-                                                       timestamp = socket.gettime(), quality = 192 }
+                                                       timestamp = gettime(), quality = 192 }
                                 return true
                         else
                                 self.cache[handle] = { err = err[i] }
@@ -542,7 +542,7 @@ function DataAccess_v2_Async:setblock(tags, vals)
         end
         local err = self.syncio:Write(#ids, ids, values)
         local i, errors = 1, {}
-        local now = socket.gettime()
+        local now = gettime()
         for j, tag in ipairs(tags) do
                 if self.items[tag] then
                         if err[i] ~= "OK" then
@@ -583,7 +583,7 @@ function DataAccess_v3_Async:set(tag, val, qual, ts)
                 local err = self.itemio:WriteVQT(1, { tag }, { vqt })
                 if err[1] == "OK" then
                         self.cache[self.items[tag]] = { result = val, err = "OK",
-                                                        timestamp = ts or socket.gettime(), quality = qual or 192 }
+                                                        timestamp = ts or gettime(), quality = qual or 192 }
                         return true
                 else
                         self.cache[self.items[tag]] = { err = err[i] }
@@ -607,7 +607,7 @@ function DataAccess_v3_Async:set(tag, val, qual, ts)
                         err = self.itemio:WriteVQT(1, { tag }, { vqt })
                         if err[1] == "OK" then
                                 self.cache[handle] = { result = val, err = "OK",
-                                                       timestamp = ts or socket.gettime(), quality = qual or 192 }
+                                                       timestamp = ts or gettime(), quality = qual or 192 }
                                 return true
                         else
                                 self.cache[handle] = { err = err[i] }
@@ -667,7 +667,7 @@ function DataAccess_v3_Async:setblock(tags, vals, quals, ts)
         end
         local err = self.itemio:WriteVQT(#ids, ids, values)
         local i, errors = 1, {}
-        local now = socket.gettime()
+        local now = gettime()
         for j, tag in ipairs(tags) do
                 if self.items[tag] then
                         if err[i] ~= "OK" then

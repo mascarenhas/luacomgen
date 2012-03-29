@@ -35,13 +35,13 @@ for i = 1, #tags/4 do
         vals[4*i-1] = 2^50-1
         vals[4*i  ] = ""
 end
---vals[#vals+1] = "The item definition does not conform to the server's syntax."
-vals[#vals+1] = "The item definition does not exist in the server's address space."
+vals[#vals+1] = "The item definition does not conform to the server's syntax."
+--vals[#vals+1] = "The item definition does not exist in the server's address space."
 
 
 
 local opc = require "mpa.bridge.opc"
-local bridge = assert(opc.open{ server = "Matrikon.OPC.Simulation", stats = true, use_v2 = false, async = false})
+local bridge = assert(opc.open{ server = "Matrikon.OPC.Simulation", stats = true, use_v2 = false, async = true})
 
 print("SOCKET", socket.gettime())
 print(bridge:get(tags[1]))
