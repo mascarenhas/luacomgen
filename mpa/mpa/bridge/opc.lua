@@ -53,6 +53,45 @@ end
 
 DataAccess_v3 = class()
 
+function DataAccess_v3:init()
+        self.last_checked = gettime()
+        self.timeout = self.params.timeout or 5
+end
+
+function DataAccess_v3:check(force)
+        local now = gettime()
+        if force or ((now - self.last_checked) > self.timeout) then
+                local ok, status = pcall(self.server.GetStatus, self.server)
+                if (not ok) or status[1].dwServerState ~= 1 then
+                        self:restart()
+                end
+                self.last_checked = now
+        end
+end
+
+function DataAccess_v3:restart()
+        if self.close then pcall(self.close, self) end
+        local params = self.params
+        local ok, server = pcall(CreateInstance, params.server, IOPCServer, self.params.host)
+        if not ok then error("server not found, COM error: " .. server) end
+        if params.user then
+          local ok, sec = pcall(server.QueryInterface, server, IOPCSecurityPrivate)
+          if not ok then error("OPC Security interface not available: " .. server) end
+          if not sec:IsAvailablePriv() then
+            error("OPC Security interface not available, COM error: " .. sec)
+          end
+          comgen.RaisePrivacy(sec)
+          local ok, err = pcall(sec.Logon, sec, params.user, params.pass)
+          if not ok then error("login to server failed, COM error: " .. err) end
+        end
+        self.server = server
+        local ok, itemio = pcall(server.QueryInterface, server, IOPCItemIO)
+        if ok and (not params.use_v2) then
+          self.itemio = itemio
+        end
+        if self.init then self:init() end
+end
+
 function DataAccess_v3:errmsg(err)
         if type(err) == "number" then
                 return self.server:GetErrorString(err, 1033)
@@ -62,6 +101,7 @@ function DataAccess_v3:errmsg(err)
 end
 
 function DataAccess_v3:get(tag)
+        self:check()
         local values, quals, ts, err = self.itemio:Read(1, { tag }, { 0 })
         if err[1] == "OK" then
                 return values[1], quals[1], filetime2stime(ts[1])
@@ -71,6 +111,7 @@ function DataAccess_v3:get(tag)
 end
 
 function DataAccess_v3:set(tag, val, qual, ts)
+        self:check()
         local vqt = { vDataValue = val, ftTimeStamp = {} }
         if qual then
                 vqt.bQualitySpecified = true
@@ -89,6 +130,7 @@ function DataAccess_v3:set(tag, val, qual, ts)
 end
 
 function DataAccess_v3:getblock(tags)
+        self:check()
         local ages = {}
         for i = 1, #tags do ages[i] = 0 end
         local values, quals, ts, err = self.itemio:Read(#tags, tags, ages)
@@ -104,6 +146,7 @@ function DataAccess_v3:getblock(tags)
 end
 
 function DataAccess_v3:setblock(tags, vals, quals, ts)
+        self:check()
         quals = quals or {}
         ts = ts or {}
         local vqts = {}
@@ -147,6 +190,7 @@ function DataAccess_v2:init()
 end
 
 function DataAccess_v2:get(tag)
+        self:check()
         if self.items[tag] then
                 local result, err = self.syncio:Read("OPC_DS_DEVICE", 1, { self.items[tag] })
                 if err[1] == "OK" then
@@ -177,6 +221,7 @@ function DataAccess_v2:get(tag)
 end
 
 function DataAccess_v2:set(tag, val)
+        self:check()
         if self.items[tag] then
                 local err = self.syncio:Write(1, { self.items[tag] }, { val })
                 if err[1] == "OK" then
@@ -205,6 +250,7 @@ function DataAccess_v2:set(tag, val)
 end
 
 function DataAccess_v2:getblock(tags)
+        self:check()
         local new, err_add = {}, {}
         for _, tag in ipairs(tags) do
                 if not self.items[tag] then
@@ -252,6 +298,7 @@ function DataAccess_v2:getblock(tags)
 end
 
 function DataAccess_v2:setblock(tags, vals)
+        self:check()
         local new, err_add = {}, {}
         for _, tag in ipairs(tags) do
                 if not self.items[tag] then
@@ -369,6 +416,7 @@ function DataAccess_v2_Async:newhandle()
 end
 
 function DataAccess_v2_Async:get(tag)
+        self:check()
         if self.items[tag] then
                 local item = self.cache[self.items[tag]]
                 if item.err == "OK" then
@@ -412,6 +460,7 @@ function DataAccess_v2_Async:get(tag)
 end
 
 function DataAccess_v2_Async:set(tag, val)
+        self:check()
         if self.handles[tag] then
                 local err = self.syncio:Write(1, { self.handles[tag] }, { val })
                 if err[1] == "OK" then
@@ -451,6 +500,7 @@ function DataAccess_v2_Async:set(tag, val)
 end
 
 function DataAccess_v2_Async:getblock(tags)
+        self:check()
         local new, err_add = {}, {}
         for _, tag in ipairs(tags) do
                 if not self.items[tag] then
@@ -507,6 +557,7 @@ function DataAccess_v2_Async:getblock(tags)
 end
 
 function DataAccess_v2_Async:setblock(tags, vals)
+        self:check()
         local new, err_add = {}, {}
         for _, tag in ipairs(tags) do
                 if not self.items[tag] then
@@ -570,6 +621,7 @@ end
 DataAccess_v3_Async = class({ handle = 1000 }, DataAccess_v2_Async)
 
 function DataAccess_v3_Async:set(tag, val, qual, ts)
+        self:check()
         local vqt = { vDataValue = val, ftTimeStamp = {} }
         if qual then
                 vqt.bQualitySpecified = true
@@ -618,6 +670,7 @@ function DataAccess_v3_Async:set(tag, val, qual, ts)
 end
 
 function DataAccess_v3_Async:setblock(tags, vals, quals, ts)
+        self:check()
         quals = quals or {}
         ts = ts or {}
         local vqts = {}
@@ -755,46 +808,36 @@ end
 --------------------------------------------------------------------------------
 -- Creation of OPC bridge ------------------------------------------------------
 
-function open(server, host, stats, use_v2, async, user, pass)
-        if type(server) == "table" then
-          host = server.host
-          stats = server.stats
-          use_v2 = server.use_v2
-          async = server.async
-          user = server.user
-          pass = server.pass
-          server = server.server
+function open(params, host, stats, use_v2, async, user, pass)
+        if type(params) ~= "table" then
+          params = { server = params, host = host, stats = stats,
+                     use_v2 = use_v2, async = async, user = user,
+                     pass = pass }
         end
-        if host == "" then host = nil end
-        if stats == "" then stats = nil end
-        if use_v2 == "" then use_v2 = nil end
-        if async == "" then async = nil end
-        if user == "" then user = nil end
-        if pass == "" then pass = nil end
-        local ok, server = pcall(CreateInstance, server, IOPCServer, host)
+        local ok, server = pcall(CreateInstance, params.server, IOPCServer, params.host)
         if not ok then return nil, "server not found, COM error: " .. server end
-        if user then
+        if params.user then
           local ok, sec = pcall(server.QueryInterface, server, IOPCSecurityPrivate)
           if not ok then return nil, "OPC Security interface not available: " .. server end
           if not sec:IsAvailablePriv() then
-            return nil, "OPC Security interface not available: " .. server
+            return nil, "OPC Security interface not available, COM error: " .. sec
           end
           comgen.RaisePrivacy(sec)
-          local ok = pcall(sec.Logon, sec, user, pass)
-          if not ok then return nil, "login to server failed: " .. server end
+          local ok, err = pcall(sec.Logon, sec, params.user, params.pass)
+          if not ok then return nil, "login to server failed, COM error: " .. err end
         end
         local ok, itemio = pcall(server.QueryInterface, server, IOPCItemIO)
-        if ok and (not use_v2) then
-          if async then
-                server = DataAccess_v3_Async{ server = server, itemio = itemio }
+        if ok and (not params.use_v2) then
+          if params.async then
+                server = DataAccess_v3_Async{ params = params, server = server, itemio = itemio }
           else
-                server = DataAccess_v3{ server = server, itemio = itemio }
+                server = DataAccess_v3{ params = params, server = server, itemio = itemio }
           end
         else
-          if async then
-                server = DataAccess_v2_Async{ server = server }
+          if params.async then
+                server = DataAccess_v2_Async{ params = params, server = server }
           else
-                server = DataAccess_v2{ server = server }
+                server = DataAccess_v2{ params = params, server = server }
           end
         end
         if stats then

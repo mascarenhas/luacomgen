@@ -64,6 +64,20 @@ local OPCITEMVQT = types.struct("OPCITEMVQT", {
   { type = FILETIME, name = "ftTimeStamp" },
 })
 
+local OPCSERVERSTATUS = types.struct("OPCSERVERSTATUS", {
+  { type = FILETIME, name = "ftStartTime" },
+  { type = FILETIME, name = "ftCurrentTime" },
+  { type = FILETIME, name = "ftLastUpdateTime" },
+  { type = types.dword, name = "dwServerState" },
+  { type = types.dword, name = "dwGroupCount" },
+  { type = types.dword, name = "dwBandWidth" },
+  { type = types.word, name = "wMajorVersion" },
+  { type = types.word, name = "wMinorVersion" },
+  { type = types.word, name = "wBuildNumber" },
+  { type = types.word, name = "wReserved" },
+  { type = types.wstring, name = "szVendorInfo" }
+})
+
 local IOPCServer = {
   name = "IOPCServer",
   iid = "{39C13A4D-011E-11D0-9675-0020AFD8ADB3}",
@@ -91,6 +105,10 @@ local IOPCServer = {
         { type = types.dword, attributes = { ["in"] = true }, name = "hServerGroup" },
         { type = types.bool, attributes = { ["in"] = true }, name = "bForce" },
       }
+    },
+    {
+      name = "GetStatus",
+      parameters = { { type = types.array(OPCSERVERSTATUS), attributes = { out = true, size_is = "1" }, name = "ppServerStatus" } }
     },
     {
       name = "GetErrorString",
