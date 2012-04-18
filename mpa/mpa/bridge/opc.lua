@@ -326,7 +326,11 @@ function DataAccess_v2:setblock(tags, vals)
         for i, tag in ipairs(tags) do
                 if self.items[tag] then
                         ids[#ids + 1] = self.items[tag]
-                        values[#values + 1] = vals[i]
+                        if type(vals[i]) == "nil" then
+                          values[#values + 1] = { type = "EMPTY" }
+                        else
+                          values[#values + 1] = vals[i]
+                        end
                 end
         end
         local err = self.syncio:Write(#ids, ids, values)
@@ -522,6 +526,7 @@ function DataAccess_v2_Async:getblock(tags)
                 for i, item in ipairs(new) do
                         if err[i] == "OK" then
                                 self.items[item.szItemID] = item.hClient
+                                self.handles[item.szItemID] = result[i].hServer
                                 ids[#ids + 1] = result[i].hServer
                                 handles[#handles + 1] = item.hClient
                         else
@@ -588,7 +593,11 @@ function DataAccess_v2_Async:setblock(tags, vals)
         for i, tag in ipairs(tags) do
                 if self.items[tag] then
                         ids[#ids + 1] = self.handles[tag]
-                        values[#values + 1] = vals[i]
+                        if type(vals[i]) == "nil" then
+                          values[#values + 1] = { type = "EMPTY" }
+                        else
+                          values[#values + 1] = vals[i]
+                        end
                 end
         end
         local err = self.syncio:Write(#ids, ids, values)
