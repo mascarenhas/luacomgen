@@ -133,7 +133,10 @@ function DataAccess_v3:getblock(tags)
         self:check()
         local ages = {}
         for i = 1, #tags do ages[i] = 0 end
-        local values, quals, ts, err = self.itemio:Read(#tags, tags, ages)
+        local values, quals, ts, err
+        if #tags > 0 then
+          values, quals, ts, err = self.itemio:Read(#tags, tags, ages)
+        end
         local res = {}
         for i = 1, #tags do
                 if err[i] == "OK" then
@@ -161,7 +164,10 @@ function DataAccess_v3:setblock(tags, vals, quals, ts)
                         vqts[i].ftTimeStamp = stime2filetime(ts[i])
                 end
         end
-        local err = self.itemio:WriteVQT(#tags, tags, vqts)
+        local err = {}
+        if #tags > 0 then
+          err = self.itemio:WriteVQT(#tags, tags, vqts)
+        end
         local errors = {}
         for i = 1, #err do
                 if err[i] ~= "OK" then
@@ -278,7 +284,10 @@ function DataAccess_v2:getblock(tags)
         for _, tag in ipairs(tags) do
                 ids[#ids + 1] = self.items[tag]
         end
-        local result, err = self.syncio:Read("OPC_DS_DEVICE", #ids, ids)
+        local result, err
+        if #ids > 0 then
+          result, err = self.syncio:Read("OPC_DS_DEVICE", #ids, ids)
+        end
         local i, res = 1, {}
         for _, tag in ipairs(tags) do
                 if self.items[tag] then
@@ -333,7 +342,10 @@ function DataAccess_v2:setblock(tags, vals)
                         end
                 end
         end
-        local err = self.syncio:Write(#ids, ids, values)
+        local err
+        if #ids > 0 then
+          err = self.syncio:Write(#ids, ids, values)
+        end
         local i, errors = 1, {}
         for _, tag in ipairs(tags) do
                 if self.items[tag] then
@@ -600,7 +612,10 @@ function DataAccess_v2_Async:setblock(tags, vals)
                         end
                 end
         end
-        local err = self.syncio:Write(#ids, ids, values)
+        local err
+        if #ids > 0 then
+          err = self.syncio:Write(#ids, ids, values)
+        end
         local i, errors = 1, {}
         local now = gettime()
         for j, tag in ipairs(tags) do
@@ -727,7 +742,10 @@ function DataAccess_v3_Async:setblock(tags, vals, quals, ts)
                         values[#values + 1] = vqts[i]
                 end
         end
-        local err = self.itemio:WriteVQT(#ids, ids, values)
+        local err
+        if #ids > 0 then
+          err = self.itemio:WriteVQT(#ids, ids, values)
+        end
         local i, errors = 1, {}
         local now = gettime()
         for j, tag in ipairs(tags) do

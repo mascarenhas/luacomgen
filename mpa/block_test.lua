@@ -41,13 +41,15 @@ vals[#vals+1] = "The item definition does not conform to the server's syntax."
 
 
 local opc = require "mpa.bridge.opc"
-local bridge = assert(opc.open{ server = "Matrikon.OPC.Simulation", stats = true, use_v2 = true, async = true})
+local bridge = assert(opc.open{ server = "Matrikon.OPC.Simulation", stats = true, use_v2 = false, async = true})
 
 print("SOCKET", socket.gettime())
 print(bridge:get(tags[1]))
 
 for i = 1, 100 do
 
+        bridge:getblock({})
+        bridge:setblock({},{})
         local res = bridge:getblock({tags[1], tags[2], tags[3]})
         bridge:setblock({tags[1], tags[2],tags[3]}, {true, nil, 2.5})
 
