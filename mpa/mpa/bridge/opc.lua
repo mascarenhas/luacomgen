@@ -188,7 +188,7 @@ end
 DataAccess_v2 = class({}, DataAccess_v3)
 
 function DataAccess_v2:init()
-        local hgrp, _, mgt = self.server:AddGroup("LuaGroup", false, 0, 0, 0, IOPCItemMgt)
+        local hgrp, _, mgt = self.server:AddGroup("LuaGroup", true, 0, 0, 0, IOPCItemMgt)
         self.hgrp = hgrp
         self.mgt = mgt
         self.syncio = mgt:QueryInterface(IOPCSyncIO)

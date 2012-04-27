@@ -117,9 +117,9 @@ end
 local wrap2 = opcae.EventSink(es)
 local cookie = cp:Advise(wrap2.__interfaces.IOPCEventSink)
 
---while comgen.MessageStep() do
---  print("step")
---end
+while true do
+  comgen.MessageStep()
+end
 
 local sec = srv:QueryInterface(opcsec.IOPCSecurityPrivate)
 print(sec:IsAvailablePriv())
