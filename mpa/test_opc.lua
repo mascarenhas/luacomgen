@@ -2,8 +2,8 @@ local comgen = require "comgen"
 local opc = require "mpa.bridge.opc"
 local socket = require "socket.core"
 
-local srv = assert(opc.open{ server = "Matrikon.OPC.Simulation", stats = false, use_v2 = false, async = true})
-local tags = { "Random.Real4", "Random.Real8", "Bucket Brigade.Real4" }
+local srv = assert(opc.open{ server = "Matrikon.OPC.Simulation.1", stats = false, use_v2 = true, async = true})
+local tags = { "Random.Real4", "test.FOO_1", "Bucket Brigade.Real4" }
 
 comgen.MessageStep()
 comgen.MessageStep()

@@ -48,6 +48,22 @@ local function filetime2stime(ft)
   return t
 end
 
+local function check_value(val, qual, ts)
+  if val then
+    return val, qual, ts
+  else
+    return nil, "OPC server did not provide a value"
+  end
+end
+
+local function check_value_block(val, qual, ts)
+  if val then
+    return { success = true, value = val, quality = qual, timestamp = ts }
+  else
+    return { success = false, value = "OPC server did not provide a value" }
+  end
+end
+
 --------------------------------------------------------------------------------
 -- Support for OPC Data Access version 3 ---------------------------------------
 
@@ -104,7 +120,7 @@ function DataAccess_v3:get(tag)
         self:check()
         local values, quals, ts, err = self.itemio:Read(1, { tag }, { 0 })
         if err[1] == "OK" then
-                return values[1], quals[1], filetime2stime(ts[1])
+                return check_value(values[1], quals[1], filetime2stime(ts[1]))
         else
                 return nil, self:errmsg(err[1])
         end
@@ -140,7 +156,7 @@ function DataAccess_v3:getblock(tags)
         local res = {}
         for i = 1, #tags do
                 if err[i] == "OK" then
-                        res[i] = { success = true, value = values[i], quality = quals[i], timestamp = filetime2stime(ts[i]) }
+                        res[i] = check_value_block(values[i], quals[i],  filetime2stime(ts[i]))
                 else
                         res[i] = { success = false, value = self:errmsg(err[i]) }
                 end
@@ -200,7 +216,7 @@ function DataAccess_v2:get(tag)
         if self.items[tag] then
                 local result, err = self.syncio:Read("OPC_DS_DEVICE", 1, { self.items[tag] })
                 if err[1] == "OK" then
-                        return result[1].vDataValue, result[1].wQuality, filetime2stime(result[1].ftTimeStamp)
+                        return check_value(result[1].vDataValue, result[1].wQuality, filetime2stime(result[1].ftTimeStamp))
                 else
                         return nil, self:errmsg(err[1])
                 end
@@ -219,7 +235,7 @@ function DataAccess_v2:get(tag)
                         self.items[tag] = result[1].hServer
                         result, err = self.syncio:Read("OPC_DS_DEVICE", 1, { result[1].hServer })
                         if err[1] == "OK" then
-                                return result[1].vDataValue, result[1].wQuality, filetime2stime(result[1].ftTimeStamp)
+                               return check_value(result[1].vDataValue, result[1].wQuality, filetime2stime(result[1].ftTimeStamp))
                         end
                 end
                 return nil, self:errmsg(err[1])
@@ -292,9 +308,9 @@ function DataAccess_v2:getblock(tags)
         for _, tag in ipairs(tags) do
                 if self.items[tag] then
                         if err[i] == "OK" then
-                                res[#res + 1] = { success = true, value = result[i].vDataValue,
-                                                  quality = result[i].wQuality,
-                                                  timestamp = filetime2stime(result[i].ftTimeStamp) }
+                                res[#res + 1] = check_value_block(result[i].vDataValue,
+                                                  result[i].wQuality,
+                                                  filetime2stime(result[i].ftTimeStamp))
                         else
                                 res[#res + 1] = { success = false, value = self:errmsg(err[i]) }
                         end
@@ -436,7 +452,7 @@ function DataAccess_v2_Async:get(tag)
         if self.items[tag] then
                 local item = self.cache[self.items[tag]]
                 if item.err == "OK" then
-                        return item.result, item.quality, item.timestamp
+                        return check_value(item.result, item.quality, item.timestamp)
                 else
                         return nil, self:errmsg(item.err)
                 end
@@ -464,7 +480,7 @@ function DataAccess_v2_Async:get(tag)
                                         err = "OK",
                                 }
                                 self.cache[handle] = item
-                                return item.result, item.quality, item.timestamp
+                                return check_value(item.result, item.quality, item.timestamp)
                         else
                                 local item = { err = err[1] }
                                 self.cache[handle] = item
@@ -562,7 +578,7 @@ function DataAccess_v2_Async:getblock(tags)
                 if self.items[tag] then
                         local item = self.cache[self.items[tag]]
                         if item.err == "OK" then
-                                res[#res + 1] = { success = true, value = item.result, quality = item.quality, timestamp = item.timestamp }
+                                res[#res + 1] = check_value_block(item.result, item.quality, item.timestamp)
                         else
                                 res[#res + 1] = { success = false, value = self:errmsg(item.err) }
                         end
