@@ -5,8 +5,8 @@ local socket = require "socket.core"
 local srv = assert(opc.open{ server = "Matrikon.OPC.Simulation.1", stats = false, use_v2 = true, async = true})
 local tags = { "Random.Real4", "test.FOO_1", "Bucket Brigade.Real4" }
 
-comgen.MessageStep()
-comgen.MessageStep()
+--comgen.MessageStep()
+--comgen.MessageStep()
 
 local tab = srv:getblock(tags)
 for _, tag in ipairs(tab) do
@@ -27,8 +27,8 @@ for _, tag in ipairs(tags) do
   print(srv:get(tag))
 end
 
-comgen.MessageStep()
-comgen.MessageStep()
+--comgen.MessageStep()
+--comgen.MessageStep()
 
 for _, tag in ipairs(tags) do
   print(srv:get(tag))
@@ -38,8 +38,8 @@ srv:setblock({ "Bucket Brigade.Real4" }, { 0 })
 
 socket.sleep(2)
 
-comgen.MessageStep()
-comgen.MessageStep()
+--comgen.MessageStep()
+--comgen.MessageStep()
 
 local tab = srv:getblock(tags)
 for _, tag in ipairs(tab) do
@@ -49,6 +49,8 @@ for _, tag in ipairs(tab) do
 end
 
 while true do
-  comgen.MessageStep()
-  --print(srv:get("Random.Real"))
+  --comgen.MessageStep()
+  --print(srv:get("Random.Real4"))
+  local tab = srv:getblock{ "Random.Real4" }
+  print(tab[1].value)
 end

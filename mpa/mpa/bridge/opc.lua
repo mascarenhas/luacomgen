@@ -8,6 +8,7 @@ local gettime = socket.gettime
 
 local comgen = require "comgen"
 local CreateInstance = comgen.CreateInstance
+local MessageStep = comgen.MessageStep
 
 local opclib = require "opclib"
 local IOPCItemMgt = opclib.IOPCItemMgt
@@ -450,6 +451,7 @@ end
 function DataAccess_v2_Async:get(tag)
         self:check()
         if self.items[tag] then
+                MessageStep()
                 local item = self.cache[self.items[tag]]
                 if item.err == "OK" then
                         return check_value(item.result, item.quality, item.timestamp)
@@ -574,6 +576,7 @@ function DataAccess_v2_Async:getblock(tags)
                 end
         end
         local res = {}
+        MessageStep()
         for _, tag in ipairs(tags) do
                 if self.items[tag] then
                         local item = self.cache[self.items[tag]]
@@ -883,7 +886,7 @@ function open(params, host, stats, use_v2, async, user, pass)
                 server = DataAccess_v2{ params = params, server = server }
           end
         end
-        if stats then
+        if params.stats then
                 server.get = wrapped_get
                 server.set = wrapped_set
                 server.getblock = wrapped_getblock
