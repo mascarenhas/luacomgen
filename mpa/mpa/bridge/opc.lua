@@ -398,21 +398,10 @@ DataAccess_v2_Callback = class()
 function DataAccess_v2_Callback:OnDataChange(dwTransid, hGroup, hrMasterquality, hrMastererror, dwCount, phClientItems, pvValues, pwQualities, pftTimeStamps, pErrors)
         for i, handle in ipairs(phClientItems) do
                 if pErrors[i] == "OK" then
-                        local item = self.cache[handle]
-                        if item then
-                                item.result = pvValues[i]
-                                item.quality = pwQualities[i]
-                                item.timestamp = filetime2stime(pftTimeStamps[i])
-                                item.err = "OK"
-                        end
+                  self.cache[handle] = { result = pvValues[i], quality = pwQualities[i],
+                                         timestamp = filetime2stime(pftTimeStamps[i]), err = "OK" }
                 else
-                        local item = self.cache[handle]
-                        if item then
-                                item.result = nil
-                                item.quality = nil
-                                item.timestamp = nil
-                                item.err = pErrors[i]
-                        end
+                  self.cache[handle] = { err = pErrors[i] }
                 end
         end
 end
