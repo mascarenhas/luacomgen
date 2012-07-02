@@ -223,6 +223,19 @@ int comgen_messagestep(lua_State *L) {
   return 1;
 }
 
+static void comgen_hookstep(lua_State *L, lua_Debug *ar) {
+  comgen_messagestep(L);
+}
+
+int comgen_messagehook(lua_State *L) {
+  int n = luaL_optinteger(L, 1, 0);
+  if(n > 0) {
+    return lua_sethook(L, comgen_hookstep, LUA_MASKCOUNT, n);
+  } else {
+    return lua_sethook(L, comgen_hookstep, 0, 0);
+  }
+}
+
 int comgen_raiseprivacy(lua_State *L) {
   IUnknown *p = comgen_checkinterface(L, 1);
   HRESULT hr = CoSetProxyBlanket(p, RPC_C_AUTHN_DEFAULT, RPC_C_AUTHN_DEFAULT, NULL,
@@ -238,6 +251,7 @@ static luaL_Reg comgen_functions[] = {
   { "MessageLoop", comgen_messageloop },
   { "MessageStep", comgen_messagestep },
   { "RaisePrivacy", comgen_raiseprivacy },
+  { "MessageHook", comgen_messagehook },
   { NULL, NULL }
 };
 
