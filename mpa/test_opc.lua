@@ -2,7 +2,7 @@ local comgen = require "comgen"
 local opc = require "mpa.bridge.opc"
 local socket = require "socket.core"
 
-local srv = assert(opc.open{ server = "Matrikon.OPC.Simulation.1", stats = false, use_v2 = true, async = false, log = { "all"  }})
+local srv = assert(opc.open{ server = "Matrikon.OPC.Simulation.1", stats = false, use_v2 = true, async = false, log = "all"})
 local tags = { "Random.Int4", "Bucket Brigade.Int4" }
 
 print("GETBLOCK")

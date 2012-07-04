@@ -602,6 +602,9 @@ function open(params, host, stats, use_v2, async, user, pass, logging)
                 server.setblock = wrapped_setblock
                 server:resetstats()
         end
+        if params.log == "all" then
+          params.log = { "all" }
+        end
         for _, cat in ipairs(params.log or {}) do
           server.logging[cat] = true
         end
