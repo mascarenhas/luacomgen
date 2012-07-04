@@ -24,6 +24,7 @@ local connpoint = require "connpoint"
 local oo = require "mpa.oo"
 local class = oo.class
 local classof = oo.classof
+local log = require "mpa.server.log"
 
 module("mpa.bridge.opc", package.seeall)
 
@@ -70,9 +71,24 @@ end
 
 DataAccess_v3 = class()
 
+function DataAccess_v3:log(cat, msg, tab)
+  if self.logging.all or self.logging[cat] then
+    local t = {}
+    for k, v in pairs(tab) do
+      t[#t+1] = tostring(k) .. "=" .. tostring(v)
+    end
+    if #t > 0 then
+      log:points(msg, " (", table.concat(t, ", "), ")")
+    else
+      log:points(msg)
+    end
+  end
+end
+
 function DataAccess_v3:init()
         self.last_checked = gettime()
         self.timeout = self.params.timeout or 5
+        self.logging = {}
 end
 
 function DataAccess_v3:check(force)
@@ -87,9 +103,10 @@ function DataAccess_v3:check(force)
 end
 
 function DataAccess_v3:restart()
+        self:log("restart", "restarting server", self.params)
         if self.close then pcall(self.close, self) end
         local params = self.params
-        local ok, server = pcall(CreateInstance, params.server, IOPCServer, self.params.host)
+        local ok, server = pcall(CreateInstance, params.server, IOPCServer, params.host)
         if not ok then error("server not found, COM error: " .. server) end
         if params.user then
           local ok, sec = pcall(server.QueryInterface, server, IOPCSecurityPrivate)
@@ -107,6 +124,7 @@ function DataAccess_v3:restart()
           self.itemio = itemio
         end
         if self.init then self:init() end
+        self:log("restart", "server restart succesful")
 end
 
 function DataAccess_v3:errmsg(err)
@@ -118,32 +136,21 @@ function DataAccess_v3:errmsg(err)
 end
 
 function DataAccess_v3:get(tag)
-        self:check()
-        local values, quals, ts, err = self.itemio:Read(1, { tag }, { 0 })
-        if err[1] == "OK" then
-                return check_value(values[1], quals[1], filetime2stime(ts[1]))
-        else
-                return nil, self:errmsg(err[1])
-        end
+  local res = self:getblock{ tag }
+  if res[1].success then
+    return res[1].value, res[1].quality, res[1].timestamp
+  else
+    return nil, res[1].value
+  end
 end
 
 function DataAccess_v3:set(tag, val, qual, ts)
-        self:check()
-        local vqt = { vDataValue = val, ftTimeStamp = {} }
-        if qual then
-                vqt.bQualitySpecified = true
-                vqt.wQuality = qual
-        end
-        if ts then
-                vqt.bTimeStampSpecified = true
-                vqt.ftTimeStamp = stime2filetime(ts)
-        end
-        local err = self.itemio:WriteVQT(1, { tag }, { vqt })
-        if err[1] == "OK" then
-                return true
-        else
-                return nil, self:errmsg(err[1])
-        end
+  local err = self:setblock({ tag }, { val }, { qual }, { ts })
+  if #err == 0 then
+    return true
+  else
+    return err[1]
+  end
 end
 
 function DataAccess_v3:getblock(tags)
@@ -161,6 +168,7 @@ function DataAccess_v3:getblock(tags)
                 else
                         res[i] = { success = false, value = self:errmsg(err[i]) }
                 end
+                self:log("read", "read tag " .. tags[i], res[i])
         end
         return res
 end
@@ -189,6 +197,10 @@ function DataAccess_v3:setblock(tags, vals, quals, ts)
         for i = 1, #err do
                 if err[i] ~= "OK" then
                         errors[#errors+1] = { tag = tags[i], value = self:errmsg(err[i]) }
+                        self:log("write", "write tag " .. tags[i], { res = self:errmsg(err[i]),
+                                                                     value = vals[i], quality = quals[i], ts = ts[i] })
+                else
+                  self:log("write", "write tag " .. tags[i], { res = "OK", value = vals[i], quality = quals[i], ts = ts[i] })
                 end
         end
         return errors
@@ -212,169 +224,105 @@ function DataAccess_v2:init()
         self.items = {}
 end
 
-function DataAccess_v2:get(tag)
-        self:check()
-        if self.items[tag] then
-                local result, err = self.syncio:Read("OPC_DS_DEVICE", 1, { self.items[tag] })
-                if err[1] == "OK" then
-                        return check_value(result[1].vDataValue, result[1].wQuality, filetime2stime(result[1].ftTimeStamp))
-                else
-                        return nil, self:errmsg(err[1])
-                end
-        else
-                local result, err = self.mgt:AddItems(1, { {
-                        szAccessPath = "",
+function DataAccess_v2:add_items(tags, active)
+  local new = {}
+  for _, tag in ipairs(tags) do
+    if not self.items[tag] then
+      local handle = self.handles and self:newhandle() or 1
+      new[#new + 1] = { szAccessPath = "",
                         szItemID = tag,
-                        bActive = false,
-                        hClient = 1,
+                        bActive = active,
+                        hClient = handle,
                         dwBlobSize = 0,
                         pBlob = {},
                         vtRequestedDataType = "VT_EMPTY",
-                        wReserved = 0,
-                } })
-                if err[1] == "OK" then
-                        self.items[tag] = result[1].hServer
-                        result, err = self.syncio:Read("OPC_DS_DEVICE", 1, { result[1].hServer })
-                        if err[1] == "OK" then
-                               return check_value(result[1].vDataValue, result[1].wQuality, filetime2stime(result[1].ftTimeStamp))
-                        end
-                end
-                return nil, self:errmsg(err[1])
+                        wReserved = 0 }
+    end
+  end
+  local ids, err_add, handles = {}, {}, {}
+  if #new > 0 then
+    local result, err = self.mgt:AddItems(#new, new)
+    for i, item in ipairs(new) do
+      if err[i] == "OK" then
+        ids[#ids+1] = result[i].hServer
+        self.items[item.szItemID] = result[i].hServer
+        if self.handles then
+          handles[#handles+1] = item.hClient
+          self.handles[item.szItemID] = item.hClient
         end
-end
-
-function DataAccess_v2:set(tag, val)
-        self:check()
-        if self.items[tag] then
-                local err = self.syncio:Write(1, { self.items[tag] }, { val })
-                if err[1] == "OK" then
-                        return true
-                else
-                        return nil, self:errmsg(err[1])
-                end
-        else
-                local result, err = self.mgt:AddItems(1, { { szAccessPath = "",
-                                                 szItemID = tag,
-                                                 bActive = false,
-                                                 hClient = 1,
-                                                 dwBlobSize = 0,
-                                                 pBlob = {},
-                                                 vtRequestedDataType = "VT_EMPTY",
-                                                 wReserved = 0 } })
-                if err[1] == "OK" then
-                        self.items[tag] = result[1].hServer
-                        err = self.syncio:Write(1, { result[1].hServer }, { val })
-                        if err[1] == "OK" then
-                                return true
-                        end
-                end
-                return nil, self:errmsg(err[1])
-        end
+        self:log("add", "add tag " .. item.szItemID, { handle = item.hClient, hserver = result[i].hServer })
+      else
+        err_add[item.szItemID] = err[i]
+        self:log("add", "add tag " .. item.szItemID, { handle = item.hClient, error = err[i] })
+      end
+    end
+  end
+  return err_add, ids, handles
 end
 
 function DataAccess_v2:getblock(tags)
-        self:check()
-        local new, err_add = {}, {}
-        for _, tag in ipairs(tags) do
-                if not self.items[tag] then
-                        new[#new + 1] = { szAccessPath = "",
-                        szItemID = tag,
-                        bActive = false,
-                        hClient = 1,
-                        dwBlobSize = 0,
-                        pBlob = {},
-                        vtRequestedDataType = "VT_EMPTY",
-                        wReserved = 0 }
-                end
-        end
-        if #new > 0 then
-                local result, err = self.mgt:AddItems(#new, new)
-                for i, item in ipairs(new) do
-                        if err[i] == "OK" then
-                                self.items[item.szItemID] = result[i].hServer
-                        else
-                                err_add[item.szItemID] = err[i]
-                        end
-                end
-        end
-        local ids = {}
-        for _, tag in ipairs(tags) do
-                ids[#ids + 1] = self.items[tag]
-        end
-        local result, err
-        if #ids > 0 then
-          result, err = self.syncio:Read("OPC_DS_DEVICE", #ids, ids)
-        end
-        local i, res = 1, {}
-        for _, tag in ipairs(tags) do
-                if self.items[tag] then
-                        if err[i] == "OK" then
-                                res[#res + 1] = check_value_block(result[i].vDataValue,
-                                                  result[i].wQuality,
-                                                  filetime2stime(result[i].ftTimeStamp))
-                        else
-                                res[#res + 1] = { success = false, value = self:errmsg(err[i]) }
-                        end
-                        i = i + 1
-                else
-                        res[#res + 1] = { success = false, value = self:errmsg(err_add[tag]) }
-                end
-        end
-        return res
+  self:check()
+  local err_add = self:add_items(tags, false)
+  local ids = {}
+  for _, tag in ipairs(tags) do
+    ids[#ids + 1] = self.items[tag]
+  end
+  local result, err
+  if #ids > 0 then
+    result, err = self.syncio:Read("OPC_DS_DEVICE", #ids, ids)
+  end
+  local i, res = 1, {}
+  for _, tag in ipairs(tags) do
+    if self.items[tag] then
+      if err[i] == "OK" then
+        res[#res + 1] = check_value_block(result[i].vDataValue,
+                                          result[i].wQuality,
+                                          filetime2stime(result[i].ftTimeStamp))
+      else
+        res[#res + 1] = { success = false, value = self:errmsg(err[i]) }
+      end
+      i = i + 1
+    else
+      res[#res + 1] = { success = false, value = self:errmsg(err_add[tag]) }
+    end
+    self:log("read", "read tag " .. tag, res[#res])
+  end
+  return res
 end
 
 function DataAccess_v2:setblock(tags, vals)
-        self:check()
-        local new, err_add = {}, {}
-        for _, tag in ipairs(tags) do
-                if not self.items[tag] then
-                        new[#new + 1] = { szAccessPath = "",
-                        szItemID = tag,
-                        bActive = false,
-                        hClient = 1,
-                        dwBlobSize = 0,
-                        pBlob = {},
-                        vtRequestedDataType = "VT_EMPTY",
-                        wReserved = 0 }
-                end
-        end
-        if #new > 0 then
-                local result, err = self.mgt:AddItems(#new, new)
-                for i, item in ipairs(new) do
-                        if err[i] == "OK" then
-                                self.items[item.szItemID] = result[i].hServer
-                        else
-                                err_add[item.szItemID] = err[i]
-                        end
-                end
-        end
-        local ids, values = {}, {}
-        for i, tag in ipairs(tags) do
-                if self.items[tag] then
-                        ids[#ids + 1] = self.items[tag]
-                        if type(vals[i]) == "nil" then
-                          values[#values + 1] = { type = "EMPTY" }
-                        else
-                          values[#values + 1] = vals[i]
-                        end
-                end
-        end
-        local err
-        if #ids > 0 then
-          err = self.syncio:Write(#ids, ids, values)
-        end
-        local i, errors = 1, {}
-        for _, tag in ipairs(tags) do
-                if self.items[tag] then
-                        if err[i] ~= "OK" then
-                                errors[#errors + 1] = { tag = tag, value = self:errmsg(err[i]) }
-                        end
-                        i = i + 1
-                else
-                        errors[#errors + 1] = { tag = tag, value = self:errmsg(err_add[tag]) }
-                end
-        end
-        return errors
+  self:check()
+  local err_add = self:add_items(tags, false)
+  local ids, values = {}, {}
+  for i, tag in ipairs(tags) do
+    if self.items[tag] then
+      ids[#ids + 1] = self.items[tag]
+      if type(vals[i]) == "nil" then
+        values[#values + 1] = { type = "EMPTY" }
+      else
+        values[#values + 1] = vals[i]
+      end
+    end
+  end
+  local err
+  if #ids > 0 then
+    err = self.syncio:Write(#ids, ids, values)
+  end
+  local i, errors = 1, {}
+  for _, tag in ipairs(tags) do
+    if self.items[tag] then
+      if err[i] ~= "OK" then
+        errors[#errors + 1] = { tag = tag, value = self:errmsg(err[i]) }
+        self:log("write", "write tag " .. tag, { res = self:errmsg(err[i]), value = values[i] })
+      else
+        self:log("write", "write tag " .. tag, { res = "OK", value = values[i] })
+      end
+      i = i + 1
+    else
+      errors[#errors + 1] = { tag = tag, value = self:errmsg(err_add[tag]) }
+    end
+  end
+  return errors
 end
 
 function DataAccess_v2:close()
@@ -395,7 +343,10 @@ end
 
 DataAccess_v2_Callback = class()
 
-function DataAccess_v2_Callback:OnDataChange(dwTransid, hGroup, hrMasterquality, hrMastererror, dwCount, phClientItems, pvValues, pwQualities, pftTimeStamps, pErrors)
+DataAccess_v2_Callback.log = DataAccess_v3.log
+
+function DataAccess_v2_Callback:OnDataChange(dwTransid, hGroup, hrMasterquality, hrMastererror, dwCount, phClientItems,
+                                             pvValues, pwQualities, pftTimeStamps, pErrors)
         for i, handle in ipairs(phClientItems) do
                 if pErrors[i] == "OK" then
                   self.cache[handle] = { result = pvValues[i], quality = pwQualities[i],
@@ -403,6 +354,7 @@ function DataAccess_v2_Callback:OnDataChange(dwTransid, hGroup, hrMasterquality,
                 else
                   self.cache[handle] = { err = pErrors[i] }
                 end
+                self:log("change", "got new value of tag at handle " .. handle, self.cache[handle])
         end
 end
 
@@ -426,7 +378,7 @@ function DataAccess_v2_Async:init()
         self.cpc = self.mgt:QueryInterface(connpoint.IConnectionPointContainer)
         self.cp = self.cpc:FindConnectionPoint(opclib.IOPCDataCallback)
         self.cache = {}
-        self.cb = DataAccess_v2_Callback{ cache = self.cache }
+        self.cb = DataAccess_v2_Callback{ cache = self.cache, logging = self.logging }
         self.wrap = opclib.DataCallback(self.cb)
         self.cookie = self.cp:Advise(self.wrap.__interfaces.IOPCDataCallback)
         self.handles = {}
@@ -437,210 +389,77 @@ function DataAccess_v2_Async:newhandle()
         return self.handle
 end
 
-function DataAccess_v2_Async:get(tag)
-        self:check()
-        if self.items[tag] then
-                MessageStep()
-                local item = self.cache[self.items[tag]]
-                if item.err == "OK" then
-                        return check_value(item.result, item.quality, item.timestamp)
-                else
-                        return nil, self:errmsg(item.err)
-                end
-        else
-                local handle = self:newhandle()
-                local result, err = self.mgt:AddItems(1, { {
-                        szAccessPath = "",
-                        szItemID = tag,
-                        bActive = true,
-                        hClient = handle,
-                        dwBlobSize = 0,
-                        pBlob = {},
-                        vtRequestedDataType = "VT_EMPTY",
-                        wReserved = 0,
-                } })
-                if err[1] == "OK" then
-                        self.items[tag] = handle
-                        self.handles[tag] = result[1].hServer
-                        result, err = self.syncio:Read("OPC_DS_DEVICE", 1, { result[1].hServer })
-                        if err[1] == "OK" then
-                                local item = {
-                                        result = result[1].vDataValue,
-                                        quality = result[1].wQuality,
-                                        timestamp = filetime2stime(result[1].ftTimeStamp),
-                                        err = "OK",
-                                }
-                                self.cache[handle] = item
-                                return check_value(item.result, item.quality, item.timestamp)
-                        else
-                                local item = { err = err[1] }
-                                self.cache[handle] = item
-                                return nil, self:errmsg(item.err)
-                        end
-                end
-                return nil, self:errmsg(err[1])
-        end
-end
-
-function DataAccess_v2_Async:set(tag, val)
-        self:check()
-        if self.handles[tag] then
-                local err = self.syncio:Write(1, { self.handles[tag] }, { val })
-                if err[1] == "OK" then
-                        self.cache[self.items[tag]] = { result = val, err = "OK",
-                                                        timestamp = gettime(), quality = 192 }
-                        return true
-                else
-                        self.cache[self.items[tag]] = { err = err[i] }
-                        return nil, self:errmsg(err[1])
-                end
-        else
-                local handle = self:newhandle()
-                local result, err = self.mgt:AddItems(1, { {
-                        szAccessPath = "",
-                        szItemID = tag,
-                        bActive = true,
-                        hClient = handle,
-                        dwBlobSize = 0,
-                        pBlob = {},
-                        vtRequestedDataType = "VT_EMPTY",
-                        wReserved = 0,
-                } })
-                if err[1] == "OK" then
-                        self.items[tag] = handle
-                        self.handles[tag] = result[1].hServer
-                        err = self.syncio:Write(1, { result[1].hServer }, { val })
-                        if err[1] == "OK" then
-                                self.cache[handle] = { result = val, err = "OK",
-                                                       timestamp = gettime(), quality = 192 }
-                                return true
-                        else
-                                self.cache[handle] = { err = err[i] }
-                        end
-                end
-                return nil, self:errmsg(err[1])
-        end
-end
-
 function DataAccess_v2_Async:getblock(tags)
-        self:check()
-        local new, err_add = {}, {}
-        for _, tag in ipairs(tags) do
-                if not self.items[tag] then
-                        new[#new + 1] = {
-                                szAccessPath = "",
-                                szItemID = tag,
-                                bActive = true,
-                                hClient = self:newhandle(),
-                                dwBlobSize = 0,
-                                pBlob = {},
-                                vtRequestedDataType = "VT_EMPTY",
-                                wReserved = 0,
-                        }
-                end
-        end
-        local ids, handles = {}, {}
-        if #new > 0 then
-                local result, err = self.mgt:AddItems(#new, new)
-                for i, item in ipairs(new) do
-                        if err[i] == "OK" then
-                                self.items[item.szItemID] = item.hClient
-                                self.handles[item.szItemID] = result[i].hServer
-                                ids[#ids + 1] = result[i].hServer
-                                handles[#handles + 1] = item.hClient
-                        else
-                                err_add[item.szItemID] = err[i]
-                        end
-                end
-        end
-        if #ids > 0 then
-                local result, err = self.syncio:Read("OPC_DS_DEVICE", #ids, ids)
-                for i, id in ipairs(ids) do
-                        if err[i] == "OK" then
-                                self.cache[handles[i]] = { result = result[i].vDataValue, quality = result[i].wQuality,
-                                                           err = "OK", timestamp = filetime2stime(result[i].ftTimeStamp) }
-                        else
-                                self.cache[handles[i]] = { err = err[i] }
-                        end
-                end
-        end
-        local res = {}
-        MessageStep()
-        for _, tag in ipairs(tags) do
-                if self.items[tag] then
-                        local item = self.cache[self.items[tag]]
-                        if item.err == "OK" then
-                                res[#res + 1] = check_value_block(item.result, item.quality, item.timestamp)
-                        else
-                                res[#res + 1] = { success = false, value = self:errmsg(item.err) }
-                        end
-                else
-                        res[#res + 1] = { success = false, value = self:errmsg(err_add[tag]) }
-                end
-        end
-        return res
+  self:check()
+  local err_add, ids, handles = self:add_items(tags, true)
+  if #ids > 0 then
+    local result, err = self.syncio:Read("OPC_DS_DEVICE", #ids, ids)
+    for i, id in ipairs(ids) do
+      if err[i] == "OK" then
+        self.cache[handles[i]] = { result = result[i].vDataValue, quality = result[i].wQuality,
+                                   err = "OK", timestamp = filetime2stime(result[i].ftTimeStamp) }
+      else
+        self.cache[handles[i]] = { err = err[i] }
+      end
+      self:log("read", "initialize cache for handle " .. handles[i], self.cache[handles[i]])
+    end
+  end
+  MessageStep()
+  local res = {}
+  for _, tag in ipairs(tags) do
+    if self.handles[tag] then
+      local item = self.cache[self.handles[tag]]
+      if item.err == "OK" then
+        res[#res + 1] = check_value_block(item.result, item.quality, item.timestamp)
+      else
+        res[#res + 1] = { success = false, value = self:errmsg(item.err) }
+      end
+    else
+      res[#res + 1] = { success = false, value = self:errmsg(err_add[tag]) }
+    end
+    self:log("read", "read tag " .. tag .. " from cache", res[#res])
+  end
+  return res
 end
 
 function DataAccess_v2_Async:setblock(tags, vals)
-        self:check()
-        local new, err_add = {}, {}
-        for _, tag in ipairs(tags) do
-                if not self.items[tag] then
-                        new[#new + 1] = {
-                                szAccessPath = "",
-                                szItemID = tag,
-                                bActive = true,
-                                hClient = self:newhandle(),
-                                dwBlobSize = 0,
-                                pBlob = {},
-                                vtRequestedDataType = "VT_EMPTY",
-                                wReserved = 0,
-                        }
-                end
-        end
-        if #new > 0 then
-                local result, err = self.mgt:AddItems(#new, new)
-                for i, item in ipairs(new) do
-                        if err[i] == "OK" then
-                                self.items[item.szItemID] = new[i].hClient
-                                self.handles[item.szItemID] = result[i].hServer
-                        else
-                                err_add[item.szItemID] = err[i]
-                        end
-                end
-        end
-        local ids, values = {}, {}
-        for i, tag in ipairs(tags) do
-                if self.items[tag] then
-                        ids[#ids + 1] = self.handles[tag]
-                        if type(vals[i]) == "nil" then
-                          values[#values + 1] = { type = "EMPTY" }
-                        else
-                          values[#values + 1] = vals[i]
-                        end
-                end
-        end
-        local err
-        if #ids > 0 then
-          err = self.syncio:Write(#ids, ids, values)
-        end
-        local i, errors = 1, {}
-        local now = gettime()
-        for j, tag in ipairs(tags) do
-                if self.items[tag] then
-                        if err[i] ~= "OK" then
-                                errors[#errors + 1] = { tag = tag, value = self:errmsg(err[i]) }
-                                self.cache[self.items[tag]] = { err = err[i] }
-                        else
-                                self.cache[self.items[tag]] = { result = vals[j], err = "OK",
-                                                                timestamp = now, quality = 192 }
-                        end
-                        i = i + 1
-                else
-                        errors[#errors + 1] = { tag = tag, value = self:errmsg(err_add[tag]) }
-                end
-        end
-        return errors
+  self:check()
+  local err_add = self:add_items(tags, true)
+  local ids, values = {}, {}
+  for i, tag in ipairs(tags) do
+    if self.items[tag] then
+      ids[#ids + 1] = self.items[tag]
+      if type(vals[i]) == "nil" then
+        values[#values + 1] = { type = "EMPTY" }
+      else
+        values[#values + 1] = vals[i]
+      end
+    end
+  end
+  local err
+  if #ids > 0 then
+    err = self.syncio:Write(#ids, ids, values)
+  end
+  local i, errors = 1, {}
+  local now = gettime()
+  for j, tag in ipairs(tags) do
+    if self.handles[tag] then
+      if err[i] ~= "OK" then
+        errors[#errors + 1] = { tag = tag, value = self:errmsg(err[i]) }
+        self.cache[self.handles[tag]] = { err = err[i] }
+        self:log("write", "write tag " .. tag .. " and update cache", errors[#errors])
+      else
+        self.cache[self.handles[tag]] = { result = vals[j], err = "OK",
+                                          timestamp = now, quality = 192 }
+        self:log("write", "write tag " .. tag .. " and update cache", self.cache[self.handles[tag]])
+      end
+      i = i + 1
+    else
+      errors[#errors + 1] = { tag = tag, value = self:errmsg(err_add[tag]) }
+      self:log("write", "error writing tag " .. tag, errors[#errors])
+    end
+  end
+  return errors
 end
 
 function DataAccess_v2_Async:close()
@@ -652,125 +471,26 @@ end
 
 DataAccess_v3_Async = class({ handle = 1000 }, DataAccess_v2_Async)
 
-function DataAccess_v3_Async:set(tag, val, qual, ts)
-        self:check()
-        local vqt = { vDataValue = val, ftTimeStamp = {} }
-        if qual then
-                vqt.bQualitySpecified = true
-                vqt.wQuality = qual
-        end
-        if ts then
-                vqt.bTimeStampSpecified = true
-                vqt.ftTimeStamp = stime2filetime(ts)
-        end
-        if self.handles[tag] then
-                local err = self.itemio:WriteVQT(1, { tag }, { vqt })
-                if err[1] == "OK" then
-                        self.cache[self.items[tag]] = { result = val, err = "OK",
-                                                        timestamp = ts or gettime(), quality = qual or 192 }
-                        return true
-                else
-                        self.cache[self.items[tag]] = { err = err[i] }
-                        return nil, self:errmsg(err[1])
-                end
-        else
-                local handle = self:newhandle()
-                local result, err = self.mgt:AddItems(1, { {
-                        szAccessPath = "",
-                        szItemID = tag,
-                        bActive = true,
-                        hClient = handle,
-                        dwBlobSize = 0,
-                        pBlob = {},
-                        vtRequestedDataType = "VT_EMPTY",
-                        wReserved = 0,
-                } })
-                if err[1] == "OK" then
-                        self.items[tag] = handle
-                        self.handles[tag] = result[1].hServer
-                        err = self.itemio:WriteVQT(1, { tag }, { vqt })
-                        if err[1] == "OK" then
-                                self.cache[handle] = { result = val, err = "OK",
-                                                       timestamp = ts or gettime(), quality = qual or 192 }
-                                return true
-                        else
-                                self.cache[handle] = { err = err[i] }
-                        end
-                end
-                return nil, self:errmsg(err[1])
-        end
-end
-
 function DataAccess_v3_Async:setblock(tags, vals, quals, ts)
-        self:check()
-        quals = quals or {}
-        ts = ts or {}
-        local vqts = {}
-        for i = 1, #tags do
-                vqts[i] = { vDataValue = vals[i], ftTimeStamp = {} }
-                if quals[i] then
-                        vqts[i].bQualitySpecified = true
-                        vqts[i].wQuality = quals[i]
-                end
-                if ts[i] then
-                        vqts[i].bTimeStampSpecified = true
-                        vqts[i].ftTimeStamp = stime2filetime(ts[i])
-                end
-        end
-        local new, err_add = {}, {}
-        for _, tag in ipairs(tags) do
-                if not self.items[tag] then
-                        new[#new + 1] = {
-                                szAccessPath = "",
-                                szItemID = tag,
-                                bActive = true,
-                                hClient = self:newhandle(),
-                                dwBlobSize = 0,
-                                pBlob = {},
-                                vtRequestedDataType = "VT_EMPTY",
-                                wReserved = 0,
-                        }
-                end
-        end
-        if #new > 0 then
-                local result, err = self.mgt:AddItems(#new, new)
-                for i, item in ipairs(new) do
-                        if err[i] == "OK" then
-                                self.items[item.szItemID] = new[i].hClient
-                                self.handles[item.szItemID] = result[i].hServer
-                        else
-                                err_add[item.szItemID] = err[i]
-                        end
-                end
-        end
-        local ids, values = {}, {}, {}
-        for i, tag in ipairs(tags) do
-                if self.items[tag] then
-                        ids[#ids + 1] = tag
-                        values[#values + 1] = vqts[i]
-                end
-        end
-        local err
-        if #ids > 0 then
-          err = self.itemio:WriteVQT(#ids, ids, values)
-        end
-        local i, errors = 1, {}
-        local now = gettime()
-        for j, tag in ipairs(tags) do
-                if self.items[tag] then
-                        if err[i] ~= "OK" then
-                                errors[#errors + 1] = { tag = tag, value = self:errmsg(err[i]) }
-                                self.cache[self.items[tag]] = { err = err[i] }
-                        else
-                                self.cache[self.items[tag]] = { result = vals[j], err = "OK",
-                                                                timestamp = ts[j] or now, quality = quals[j] or 192 }
-                        end
-                        i = i + 1
-                else
-                        errors[#errors + 1] = { tag = tag, value = self:errmsg(err_add[tag]) }
-                end
-        end
-        return errors
+  quals = quals or {}
+  ts = ts or {}
+  local errors = DataAccess_v3.setblock(self, tags, vals, quals, ts)
+  local err_tag = {}
+  for _, error in ipairs(errors) do
+    err_tag[error.tag] = error.value
+  end
+  for i, tag in ipairs(tags) do
+    if self.handles[tag] then
+      if err_tag[tag] then
+        self.cache[self.handles[tag]] = { err = err_tag[tag] }
+      else
+        self.cache[self.handles[tag]] = { result = vals[i], err = "OK",
+                                          timestamp = ts[i] or now, quality = quals[i] or 192 }
+      end
+      self:log("write", "update cache of tag " .. tag, self.cache[self.handles[tag]])
+    end
+  end
+  return errors
 end
 
 --------------------------------------------------------------------------------
@@ -843,11 +563,11 @@ end
 --------------------------------------------------------------------------------
 -- Creation of OPC bridge ------------------------------------------------------
 
-function open(params, host, stats, use_v2, async, user, pass)
+function open(params, host, stats, use_v2, async, user, pass, logging)
         if type(params) ~= "table" then
           params = { server = params, host = host, stats = stats,
                      use_v2 = use_v2, async = async, user = user,
-                     pass = pass }
+                     pass = pass, log = logging }
         end
         local ok, server = pcall(CreateInstance, params.server, IOPCServer, params.host)
         if not ok then return nil, "server not found, COM error: " .. server end
@@ -881,6 +601,9 @@ function open(params, host, stats, use_v2, async, user, pass)
                 server.getblock = wrapped_getblock
                 server.setblock = wrapped_setblock
                 server:resetstats()
+        end
+        for _, cat in ipairs(params.log or {}) do
+          server.logging[cat] = true
         end
         return server
 end
