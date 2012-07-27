@@ -446,12 +446,20 @@ function DataAccess_v2_Async:setblock(tags, vals)
     if self.handles[tag] then
       if err[i] ~= "OK" then
         errors[#errors + 1] = { tag = tag, value = self:errmsg(err[i]) }
-        self.cache[self.handles[tag]] = { err = err[i] }
-        self:log("write", "write tag " .. tag .. " and update cache", errors[#errors])
+        if not self.params.nocachewrite then
+          self.cache[self.handles[tag]] = { err = err[i] }
+          self:log("write", "write tag " .. tag .. " and update cache", errors[#errors])
+        else
+          self:log("write", "write tag " .. tag, errors[#errors])
+        end
       else
-        self.cache[self.handles[tag]] = { result = vals[j], err = "OK",
-                                          timestamp = now, quality = 192 }
-        self:log("write", "write tag " .. tag .. " and update cache", self.cache[self.handles[tag]])
+        if not self.params.nocachewrite then
+          self.cache[self.handles[tag]] = { result = vals[j], err = "OK",
+                                            timestamp = now, quality = 192 }
+          self:log("write", "write tag " .. tag .. " and update cache", self.cache[self.handles[tag]])
+        else
+          self:log("write", "write tag " .. tag, self.cache[self.handles[tag]])
+        end
       end
       i = i + 1
     else
@@ -481,13 +489,15 @@ function DataAccess_v3_Async:setblock(tags, vals, quals, ts)
   end
   for i, tag in ipairs(tags) do
     if self.handles[tag] then
-      if err_tag[tag] then
-        self.cache[self.handles[tag]] = { err = err_tag[tag] }
-      else
-        self.cache[self.handles[tag]] = { result = vals[i], err = "OK",
-                                          timestamp = ts[i] or now, quality = quals[i] or 192 }
+      if not self.params.nocachewrite then
+        if err_tag[tag] then
+          self.cache[self.handles[tag]] = { err = err_tag[tag] }
+        else
+          self.cache[self.handles[tag]] = { result = vals[i], err = "OK",
+                                            timestamp = ts[i] or now, quality = quals[i] or 192 }
+        end
+        self:log("write", "update cache of tag " .. tag, self.cache[self.handles[tag]])
       end
-      self:log("write", "update cache of tag " .. tag, self.cache[self.handles[tag]])
     end
   end
   return errors
