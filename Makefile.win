@@ -63,7 +63,16 @@ connpoint.obj: connpoint.cpp
 connpoint.dll: connpoint.obj
 	link /dll connpoint.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:connpoint.def
 
-all: comgen.dll rectpointlib.dll opclib.dll connpoint.dll opcae.dll opcsec.dll
+mpclib.cpp: gen_mpc.lua
+	$(LUA) -l luarocks.require gen_mpc.lua
+
+mpclib.obj: mpclib.cpp
+	cl /c /I$(LUA_INCLUDE_DIR) /Impc mpclib.cpp
+
+mpclib.dll: mpclib.obj
+	link /dll mpclib.obj $(LUA_LIB) $(OLE_LIB) $(OLEAUT_LIB) /def:mpclib.def
+
+all: comgen.dll rectpointlib.dll opclib.dll connpoint.dll opcae.dll opcsec.dll mpclib.dll
 
 clean:
 	del *.dll *.obj *.lib *.exp rectpointlib.* opclib.*
