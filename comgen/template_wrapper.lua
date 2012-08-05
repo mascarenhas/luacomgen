@@ -381,7 +381,7 @@ static void comgen_clear_safearray(SAFEARRAY *parr) {
 #define PUSH_SAFEARRAY(T, pushf)  { \
                                     T *v = (T *)data; \
                                     lua_newtable(L); \
-                                    for(long i = lbound, j = 1; i <= ubound; i++, j++) { \
+                                    for(long i = 0, j = 1; i < nelem; i++, j++) { \
                                       lua_pushinteger(L, j); \
                                       pushf(L, v[i]); \
                                       lua_settable(L, -3); \
@@ -405,7 +405,7 @@ static void comgen_push_variant(lua_State *L, VARIANT *var);
 
 static void comgen_push_safearray(lua_State *L, VARTYPE vt, SAFEARRAY *parr) {
   int dims = SafeArrayGetDim(parr);
-  long nelem = 0;
+  long nelem = 1;
   long lbound, ubound;
   HRESULT hr;
   for (int i = 0; i < dims; i++)
@@ -414,7 +414,7 @@ static void comgen_push_safearray(lua_State *L, VARTYPE vt, SAFEARRAY *parr) {
     if(!SUCCEEDED(hr)) { comgen_clear_safearray(parr); comgen_error(L, hr); return; }
     hr = SafeArrayGetUBound(parr, i + 1, &ubound);
     if(!SUCCEEDED(hr)) { comgen_clear_safearray(parr); comgen_error(L, hr); return; }
-    nelem += (ubound - lbound + 1);
+    nelem *= (ubound - lbound + 1);
   }
   char *data;
   hr = SafeArrayAccessData(parr, (void**)&data);
