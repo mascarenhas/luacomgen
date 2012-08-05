@@ -27,10 +27,20 @@ D = 1.03
 u0_in1 = 0.004
 xk_1_in1 = 0.56
 Fo_in1 = 0
-ParametrosForaDaFaixa_in1 = { type = "R8", value = { 0.0, 0.0, 1.0 } }
+ParametrosForaDaFaixa_in1 = { type = "VARIANT", value = { 0.0, 0.0, 1.0 } }
 h_atual = 50
-h_passado_in1 = 50
+h_passado_in1 = 51
 Pvaso = 8
 Pjus = 5
 
-print(mpc:MPC_Bifasico_dll(9, TAmost, Pfwd, PCfwd, nu, np, ny, q, r, ys, yspmax, yspmin, umax, umin, dumax, LTRange_h, Bias_h, CV, gamaw, gamal, Gw, Gl, Gg, C, D, u0_in1, xk_1_in1, Fo_in1, ParametrosForaDaFaixa_in1, h_atual, h_passado_in1, Pvaso, Pjus))
+local Kph, SPh, exitFlag, u0, xk_1, Fo, x0, ParametrosForaDaFaixa, h_passado = mpc:MPC_Bifasico_dll(9, nil, nil, nil, nil, nil, nil, nil, nil, nil, TAmost, Pfwd, PCfwd, nu, np, ny, q, r, ys, yspmax, yspmin, umax, umin, dumax, LTRange_h, Bias_h, CV, gamaw, gamal, Gw, Gl, Gg, C, D, u0_in1, xk_1_in1, Fo_in1, ParametrosForaDaFaixa_in1, h_atual, h_passado_in1, Pvaso, Pjus)
+
+print(Kph)
+print(SPh)
+print(exitFlag)
+print(u0)
+print(xk_1)
+print(Fo)
+print(x0[1])
+print(unpack(ParametrosForaDaFaixa))
+print(h_passado)

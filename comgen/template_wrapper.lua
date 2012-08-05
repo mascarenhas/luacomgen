@@ -263,11 +263,12 @@ static void comgen_create_safearray(lua_State *L, VARTYPE vt, VARIANT *var) {
     }
     case VT_BOOL: FILL_SAFEARRAY(VARIANT_BOOL, comgen_tovarbool)
     case VT_VARIANT: {
-      VARIANT **v = (VARIANT **)data;
+      VARIANT *v = (VARIANT *)data;
       for(size_t i = 0, j = 1; i < n; i++, j++) {
         lua_pushinteger(L, j);
         lua_gettable(L, -2);
-        comgen_set_variant(L, lua_gettop(L), v[i]);
+        comgen_set_variant(L, lua_gettop(L), &v[i]);
+        lua_pop(L, 1);
       }
       break;
     }
@@ -403,17 +404,20 @@ static void comgen_pushlonglong(lua_State *L, LONGLONG n) {
 static void comgen_push_variant(lua_State *L, VARIANT *var);
 
 static void comgen_push_safearray(lua_State *L, VARTYPE vt, SAFEARRAY *parr) {
-  if(SafeArrayGetDim(parr) != 1) {
-    throw E_INVALIDARG;
-    return;
+  int dims = SafeArrayGetDim(parr);
+  long nelem = 0;
+  long lbound, ubound;
+  HRESULT hr;
+  for (int i = 0; i < dims; i++)
+  {
+    hr = SafeArrayGetLBound(parr, i + 1, &lbound);
+    if(!SUCCEEDED(hr)) { comgen_clear_safearray(parr); comgen_error(L, hr); return; }
+    hr = SafeArrayGetUBound(parr, i + 1, &ubound);
+    if(!SUCCEEDED(hr)) { comgen_clear_safearray(parr); comgen_error(L, hr); return; }
+    nelem += (ubound - lbound + 1);
   }
   char *data;
-  HRESULT hr = SafeArrayAccessData(parr, (void**)&data);
-  if(!SUCCEEDED(hr)) { comgen_error(L, hr); return; }
-  long lbound, ubound;
-  hr = SafeArrayGetUBound(parr, 1, &ubound);
-  if(!SUCCEEDED(hr)) { comgen_clear_safearray(parr); comgen_error(L, hr); return; }
-  hr = SafeArrayGetLBound(parr, 1, &lbound);
+  hr = SafeArrayAccessData(parr, (void**)&data);
   if(!SUCCEEDED(hr)) { comgen_clear_safearray(parr); comgen_error(L, hr); return; }
   switch(vt) {
     case VT_UI1: PUSH_SAFEARRAY(BYTE, lua_pushinteger)
@@ -430,7 +434,7 @@ static void comgen_push_safearray(lua_State *L, VARTYPE vt, SAFEARRAY *parr) {
     case VT_R8: PUSH_SAFEARRAY(DOUBLE, lua_pushnumber)
     case VT_CY: {
       comgen_clear_safearray(parr);
-      throw E_NOTIMPL;
+      luaL_error(L, "VARIANT type CY not supported");
       break;
     }
     case VT_DATE: PUSH_SAFEARRAY(DATE, lua_pushnumber)
@@ -438,20 +442,29 @@ static void comgen_push_safearray(lua_State *L, VARTYPE vt, SAFEARRAY *parr) {
     case VT_DISPATCH: PUSH_SAFEARRAY(IDispatch*, comgen_pushidispatch)
     case VT_ERROR: {
       comgen_clear_safearray(parr);
-      throw E_NOTIMPL;
+      luaL_error(L, "VARIANT type ERROR not supported");
       break;
     }
     case VT_BOOL: PUSH_SAFEARRAY(VARIANT_BOOL, comgen_pushvarbool)
-    case VT_VARIANT: PUSH_SAFEARRAY(VARIANT*, comgen_push_variant)
+    case VT_VARIANT: {
+      VARIANT *v = (VARIANT *)data;
+      lua_newtable(L);
+      for(long i = 0, j = 1; i < nelem; i++, j++) {
+        lua_pushinteger(L, j);
+        comgen_push_variant(L, &v[i]);
+        lua_settable(L, -3);
+      }
+      break;
+    }
     case VT_UNKNOWN: PUSH_SAFEARRAY(IUnknown*, comgen_pushiunknown)
     case VT_DECIMAL: {
       comgen_clear_safearray(parr);
-      throw E_NOTIMPL;
+      luaL_error(L, "VARIANT type DECIMAL not supported");
       break;
     }
     default: {
       comgen_clear_safearray(parr);
-      throw E_NOTIMPL;
+      luaL_error(L, "unsupported VARIANT type %i", vt);
     }
   }
   comgen_clear_safearray(parr);

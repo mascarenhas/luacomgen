@@ -5,10 +5,10 @@
 /* link this file in with the server and any clients */
 
 
- /* File created by MIDL compiler version 6.00.0366 */
-/* at Mon Jul 30 14:00:32 2012
+ /* File created by MIDL compiler version 7.00.0500 */
+/* at Wed Aug 01 09:46:27 2012
  */
-/* Compiler settings for mpc.idl:
+/* Compiler settings for D:\Documents and Settings\phtf\Desktop\Grupo de Controle\Projetos Especificos\Controle por bandas e MPC\MPC_Bifasico_dll\src\MPC_Bifasico_dll_idl.idl:
     Oicf, W1, Zp8, env=Win32 (32b run)
     protocol : dce , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 
@@ -70,7 +70,7 @@ typedef IID CLSID;
 MIDL_DEFINE_GUID(IID, IID_IClass1,0x3723DFA6,0x9143,0x462D,0x94,0xB8,0x94,0xB7,0x9E,0x73,0x89,0x7D);
 
 
-MIDL_DEFINE_GUID(IID, LIBID_MPC_Bifasico_dll,0xB9D44AEC,0x06A9,0x4C76,0xB7,0xC2,0xE0,0xDE,0xDC,0x9C,0x30,0x25);
+MIDL_DEFINE_GUID(IID, LIBID_MPC_Bifasico_dll,0x0F47BF4B,0xF3BE,0x457E,0xA8,0x18,0xC3,0x3A,0xA4,0x04,0xF7,0x84);
 
 
 MIDL_DEFINE_GUID(CLSID, CLSID_Class1,0x08021CAE,0x00EF,0x4F35,0x8E,0x88,0xA3,0x4E,0xF9,0x30,0xFA,0x14);

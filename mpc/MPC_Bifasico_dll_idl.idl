@@ -1,0 +1,263 @@
+import "oaidl.idl";
+import "ocidl.idl";
+import "mwcomtypes.idl";
+
+[
+  object,
+  uuid("3723DFA6-9143-462D-94B8-94B79E73897D"),
+  dual,
+  helpstring("IClass1 Interface"),
+  pointer_default(unique)
+]
+interface IClass1 : IDispatch
+{
+  [propget, id(1), helpstring("property MWFlags")]
+  HRESULT MWFlags([out, retval] IMWFlags** ppvFlags);
+  [propput, id(1), helpstring("property MWFlags")]
+  HRESULT MWFlags([in] IMWFlags* pvFlags);
+
+  [id(2), helpstring("Method MPC_Bifasico_dll")]
+  HRESULT MPC_Bifasico_dll([in] long nargout, [in,out] VARIANT* Kph, [in,out] VARIANT* 
+                           SPh, [in,out] VARIANT* exitFlag, [in,out] VARIANT* u0, 
+                           [in,out] VARIANT* xk_1, [in,out] VARIANT* Fo, [in,out] 
+                           VARIANT* x0, [in,out] VARIANT* ParametrosForaDaFaixa, [in,out] 
+                           VARIANT* h_passado, [in] VARIANT TAmost, [in] VARIANT Pfwd, 
+                           [in] VARIANT PCfwd, [in] VARIANT nu, [in] VARIANT np, [in] 
+                           VARIANT ny, [in] VARIANT q, [in] VARIANT r, [in] VARIANT ys, 
+                           [in] VARIANT yspmax, [in] VARIANT yspmin, [in] VARIANT umax, 
+                           [in] VARIANT umin, [in] VARIANT dumax, [in] VARIANT LTRange_h, 
+                           [in] VARIANT Bias_h, [in] VARIANT CV, [in] VARIANT gamaw, [in] 
+                           VARIANT gamal, [in] VARIANT Gw, [in] VARIANT Gl, [in] VARIANT 
+                           Gg, [in] VARIANT C, [in] VARIANT D, [in] VARIANT u0_in1, [in] 
+                           VARIANT xk_1_in1, [in] VARIANT Fo_in1, [in] VARIANT 
+                           ParametrosForaDaFaixa_in1, [in] VARIANT h_atual, [in] VARIANT 
+                           h_passado_in1, [in] VARIANT Pvaso, [in] VARIANT Pjus);
+
+  [id(3), helpstring("Method MCRWaitForFigures")]
+  HRESULT MCRWaitForFigures();
+  
+  [propget, id(4), helpstring("property Kph")]
+  HRESULT Kph([out, retval] VARIANT* Kph);
+  [propput, id(4), helpstring("property Kph")]
+  HRESULT Kph([in] VARIANT Kph);
+  
+  [propget, id(5), helpstring("property SPh")]
+  HRESULT SPh([out, retval] VARIANT* SPh);
+  [propput, id(5), helpstring("property SPh")]
+  HRESULT SPh([in] VARIANT SPh);
+  
+  [propget, id(6), helpstring("property exitFlag")]
+  HRESULT exitFlag([out, retval] VARIANT* exitFlag);
+  [propput, id(6), helpstring("property exitFlag")]
+  HRESULT exitFlag([in] VARIANT exitFlag);
+  
+  [propget, id(7), helpstring("property u0")]
+  HRESULT u0([out, retval] VARIANT* u0);
+  [propput, id(7), helpstring("property u0")]
+  HRESULT u0([in] VARIANT u0);
+  
+  [propget, id(8), helpstring("property xk_1")]
+  HRESULT xk_1([out, retval] VARIANT* xk_1);
+  [propput, id(8), helpstring("property xk_1")]
+  HRESULT xk_1([in] VARIANT xk_1);
+  
+  [propget, id(9), helpstring("property Fo")]
+  HRESULT Fo([out, retval] VARIANT* Fo);
+  [propput, id(9), helpstring("property Fo")]
+  HRESULT Fo([in] VARIANT Fo);
+  
+  [propget, id(10), helpstring("property x0")]
+  HRESULT x0([out, retval] VARIANT* x0);
+  [propput, id(10), helpstring("property x0")]
+  HRESULT x0([in] VARIANT x0);
+  
+  [propget, id(11), helpstring("property ParametrosForaDaFaixa")]
+  HRESULT ParametrosForaDaFaixa([out, retval] VARIANT* ParametrosForaDaFaixa);
+  [propput, id(11), helpstring("property ParametrosForaDaFaixa")]
+  HRESULT ParametrosForaDaFaixa([in] VARIANT ParametrosForaDaFaixa);
+  
+  [propget, id(12), helpstring("property h_passado")]
+  HRESULT h_passado([out, retval] VARIANT* h_passado);
+  [propput, id(12), helpstring("property h_passado")]
+  HRESULT h_passado([in] VARIANT h_passado);
+  
+  [propget, id(13), helpstring("property TAmost")]
+  HRESULT TAmost([out, retval] VARIANT* TAmost);
+  [propput, id(13), helpstring("property TAmost")]
+  HRESULT TAmost([in] VARIANT TAmost);
+  
+  [propget, id(14), helpstring("property Pfwd")]
+  HRESULT Pfwd([out, retval] VARIANT* Pfwd);
+  [propput, id(14), helpstring("property Pfwd")]
+  HRESULT Pfwd([in] VARIANT Pfwd);
+  
+  [propget, id(15), helpstring("property PCfwd")]
+  HRESULT PCfwd([out, retval] VARIANT* PCfwd);
+  [propput, id(15), helpstring("property PCfwd")]
+  HRESULT PCfwd([in] VARIANT PCfwd);
+  
+  [propget, id(16), helpstring("property nu")]
+  HRESULT nu([out, retval] VARIANT* nu);
+  [propput, id(16), helpstring("property nu")]
+  HRESULT nu([in] VARIANT nu);
+  
+  [propget, id(17), helpstring("property np")]
+  HRESULT np([out, retval] VARIANT* np);
+  [propput, id(17), helpstring("property np")]
+  HRESULT np([in] VARIANT np);
+  
+  [propget, id(18), helpstring("property ny")]
+  HRESULT ny([out, retval] VARIANT* ny);
+  [propput, id(18), helpstring("property ny")]
+  HRESULT ny([in] VARIANT ny);
+  
+  [propget, id(19), helpstring("property q")]
+  HRESULT q([out, retval] VARIANT* q);
+  [propput, id(19), helpstring("property q")]
+  HRESULT q([in] VARIANT q);
+  
+  [propget, id(20), helpstring("property r")]
+  HRESULT r([out, retval] VARIANT* r);
+  [propput, id(20), helpstring("property r")]
+  HRESULT r([in] VARIANT r);
+  
+  [propget, id(21), helpstring("property ys")]
+  HRESULT ys([out, retval] VARIANT* ys);
+  [propput, id(21), helpstring("property ys")]
+  HRESULT ys([in] VARIANT ys);
+  
+  [propget, id(22), helpstring("property yspmax")]
+  HRESULT yspmax([out, retval] VARIANT* yspmax);
+  [propput, id(22), helpstring("property yspmax")]
+  HRESULT yspmax([in] VARIANT yspmax);
+  
+  [propget, id(23), helpstring("property yspmin")]
+  HRESULT yspmin([out, retval] VARIANT* yspmin);
+  [propput, id(23), helpstring("property yspmin")]
+  HRESULT yspmin([in] VARIANT yspmin);
+  
+  [propget, id(24), helpstring("property umax")]
+  HRESULT umax([out, retval] VARIANT* umax);
+  [propput, id(24), helpstring("property umax")]
+  HRESULT umax([in] VARIANT umax);
+  
+  [propget, id(25), helpstring("property umin")]
+  HRESULT umin([out, retval] VARIANT* umin);
+  [propput, id(25), helpstring("property umin")]
+  HRESULT umin([in] VARIANT umin);
+  
+  [propget, id(26), helpstring("property dumax")]
+  HRESULT dumax([out, retval] VARIANT* dumax);
+  [propput, id(26), helpstring("property dumax")]
+  HRESULT dumax([in] VARIANT dumax);
+  
+  [propget, id(27), helpstring("property LTRange_h")]
+  HRESULT LTRange_h([out, retval] VARIANT* LTRange_h);
+  [propput, id(27), helpstring("property LTRange_h")]
+  HRESULT LTRange_h([in] VARIANT LTRange_h);
+  
+  [propget, id(28), helpstring("property Bias_h")]
+  HRESULT Bias_h([out, retval] VARIANT* Bias_h);
+  [propput, id(28), helpstring("property Bias_h")]
+  HRESULT Bias_h([in] VARIANT Bias_h);
+  
+  [propget, id(29), helpstring("property CV")]
+  HRESULT CV([out, retval] VARIANT* CV);
+  [propput, id(29), helpstring("property CV")]
+  HRESULT CV([in] VARIANT CV);
+  
+  [propget, id(30), helpstring("property gamaw")]
+  HRESULT gamaw([out, retval] VARIANT* gamaw);
+  [propput, id(30), helpstring("property gamaw")]
+  HRESULT gamaw([in] VARIANT gamaw);
+  
+  [propget, id(31), helpstring("property gamal")]
+  HRESULT gamal([out, retval] VARIANT* gamal);
+  [propput, id(31), helpstring("property gamal")]
+  HRESULT gamal([in] VARIANT gamal);
+  
+  [propget, id(32), helpstring("property Gw")]
+  HRESULT Gw([out, retval] VARIANT* Gw);
+  [propput, id(32), helpstring("property Gw")]
+  HRESULT Gw([in] VARIANT Gw);
+  
+  [propget, id(33), helpstring("property Gl")]
+  HRESULT Gl([out, retval] VARIANT* Gl);
+  [propput, id(33), helpstring("property Gl")]
+  HRESULT Gl([in] VARIANT Gl);
+  
+  [propget, id(34), helpstring("property Gg")]
+  HRESULT Gg([out, retval] VARIANT* Gg);
+  [propput, id(34), helpstring("property Gg")]
+  HRESULT Gg([in] VARIANT Gg);
+  
+  [propget, id(35), helpstring("property C")]
+  HRESULT C([out, retval] VARIANT* C);
+  [propput, id(35), helpstring("property C")]
+  HRESULT C([in] VARIANT C);
+  
+  [propget, id(36), helpstring("property D")]
+  HRESULT D([out, retval] VARIANT* D);
+  [propput, id(36), helpstring("property D")]
+  HRESULT D([in] VARIANT D);
+  
+  [propget, id(37), helpstring("property u0_in1")]
+  HRESULT u0_in1([out, retval] VARIANT* u0_in1);
+  [propput, id(37), helpstring("property u0_in1")]
+  HRESULT u0_in1([in] VARIANT u0_in1);
+  
+  [propget, id(38), helpstring("property xk_1_in1")]
+  HRESULT xk_1_in1([out, retval] VARIANT* xk_1_in1);
+  [propput, id(38), helpstring("property xk_1_in1")]
+  HRESULT xk_1_in1([in] VARIANT xk_1_in1);
+  
+  [propget, id(39), helpstring("property Fo_in1")]
+  HRESULT Fo_in1([out, retval] VARIANT* Fo_in1);
+  [propput, id(39), helpstring("property Fo_in1")]
+  HRESULT Fo_in1([in] VARIANT Fo_in1);
+  
+  [propget, id(40), helpstring("property ParametrosForaDaFaixa_in1")]
+  HRESULT ParametrosForaDaFaixa_in1([out, retval] VARIANT* ParametrosForaDaFaixa_in1);
+  [propput, id(40), helpstring("property ParametrosForaDaFaixa_in1")]
+  HRESULT ParametrosForaDaFaixa_in1([in] VARIANT ParametrosForaDaFaixa_in1);
+  
+  [propget, id(41), helpstring("property h_atual")]
+  HRESULT h_atual([out, retval] VARIANT* h_atual);
+  [propput, id(41), helpstring("property h_atual")]
+  HRESULT h_atual([in] VARIANT h_atual);
+  
+  [propget, id(42), helpstring("property h_passado_in1")]
+  HRESULT h_passado_in1([out, retval] VARIANT* h_passado_in1);
+  [propput, id(42), helpstring("property h_passado_in1")]
+  HRESULT h_passado_in1([in] VARIANT h_passado_in1);
+  
+  [propget, id(43), helpstring("property Pvaso")]
+  HRESULT Pvaso([out, retval] VARIANT* Pvaso);
+  [propput, id(43), helpstring("property Pvaso")]
+  HRESULT Pvaso([in] VARIANT Pvaso);
+  
+  [propget, id(44), helpstring("property Pjus")]
+  HRESULT Pjus([out, retval] VARIANT* Pjus);
+  [propput, id(44), helpstring("property Pjus")]
+  HRESULT Pjus([in] VARIANT Pjus);
+};
+[
+  uuid("0F47BF4B-F3BE-457E-A818-C33AA404F784"),
+  version(1.0),
+  helpstring("MPC_Bifasico_dll 1.0 Type Library")
+]
+library MPC_Bifasico_dll
+{
+  importlib("stdole32.tlb");
+  importlib("stdole2.tlb");
+  importlib("mwcomutil.tlb");
+
+  [
+    uuid("08021CAE-00EF-4F35-8E88-A34EF930FA14"),
+    helpstring("Class1 Class")
+  ]
+  coclass Class1
+  {
+    [default] interface IClass1;
+  };
+};
