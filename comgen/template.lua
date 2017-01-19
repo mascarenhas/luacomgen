@@ -111,7 +111,7 @@ static void comgen_fillmethods(lua_State *L, const char *iid_parent_string,
   lua_settop(L, i);
   lua_pushvalue(L, -1);
   lua_setmetatable(L, -2);
-  luaL_register(L, NULL, methods);
+  luaL_setfuncs(L, methods, 0);
   comgen_registermeta(L, iid_string, ifname);
 }
 
@@ -305,7 +305,7 @@ static void comgen_clear_safearray(SAFEARRAY *parr);
 
 static void comgen_create_safearray(lua_State *L, VARTYPE vt, VARIANT *var) {
   var->vt = vt | VT_ARRAY;
-  size_t n = lua_objlen(L, -1);
+  size_t n = lua_rawlen(L, -1);
   var->parray = SafeArrayCreateVector(vt, 0, n);
   if(!var->parray) { luaL_error(L, "could not create safearray of size %i", n); }
   char *data;
@@ -654,7 +654,7 @@ $interfaces[[
 $enums[[
   comgen_registerenum(L, "$name", $(name)_fields);
 ]]
-  luaL_register(L, "$modname", $(modname)_functions);
+  luaL_newlib(L, $(modname)_functions);
 $interfaces[[
   lua_pushstring(L, IID_$(ifname)_String);
   lua_setfield(L, -2, "$ifname");

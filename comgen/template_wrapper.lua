@@ -229,7 +229,7 @@ static void comgen_clear_safearray(SAFEARRAY *parr);
 
 static void comgen_create_safearray(lua_State *L, VARTYPE vt, VARIANT *var) {
   var->vt = vt | VT_ARRAY;
-  size_t n = lua_objlen(L, -1);
+  size_t n = lua_rawlen(L, -1);
   var->parray = SafeArrayCreateVector(vt, 0, n);
   if(!var->parray) { throw E_OUTOFMEMORY; }
   char *data;

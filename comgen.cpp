@@ -263,9 +263,9 @@ extern "C" int luaopen_comgen(lua_State *L) {
     lua_newtable(L);
     lua_setfield(L, LUA_REGISTRYINDEX, "luacomgen_enums");
     lua_newtable(L);
-    luaL_register(L, NULL, iunknown_methods);
+    luaL_setfuncs(L, iunknown_methods, 0);
     iunknown_registermeta(L);
-    luaL_register(L, "comgen", comgen_functions);
+    luaL_newlib(L, comgen_functions);
     lua_pushstring(L, IID_IUnknown_String);
     lua_setfield(L, -2, "IUnknown");
     return 1;

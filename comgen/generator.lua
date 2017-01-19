@@ -63,8 +63,8 @@ local template_clear_struct = cosmo.compile[=[
 local template_set_array = cosmo.compile[=[
   $if{set}[[
     { int __pos_$(strip(stkidx));
-    if(lua_objlen(L, $stkidx) != $size)
-      luaL_error(L, "array size does not match, expected: %i, actual: %i", $size, lua_objlen(L, $stkidx));
+    if(lua_rawlen(L, $stkidx) != $size)
+      luaL_error(L, "array size does not match, expected: %i, actual: %i", $size, lua_rawlen(L, $stkidx));
     $var = ($ctype *)CoTaskMemAlloc($size * sizeof($ctype));
     for(size_t $idx = 0; $idx < $size; $idx++) {
       lua_rawgeti(L, $stkidx, $idx + 1);
@@ -96,7 +96,7 @@ local template_clear_array = cosmo.compile[=[
 ]=]
 
 local template_set_safearray = cosmo.compile[=[
-  size_t __$(name)_n = lua_objlen(L, $stkidx);
+  size_t __$(name)_n = lua_rawlen(L, $stkidx);
   $name = SafeArrayCreateVector(comgen_name2vt(L, "$(elem.vt)"), $lbound, __$(name)_n);
   if(!$name) luaL_error(L, "could not create SAFEARRAY $name");
   $(elem.ctype) * __$(name)_elems;
