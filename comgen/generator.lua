@@ -773,8 +773,14 @@ function _M.compile_wrapper(name, interfaces)
 end
 
 function _M.compile(library)
+  local modname = library.luamodule
+  if modname == nil then
+    modname = library.modname
+  else
+    modname = string.gsub(modname, "%.", "_")
+  end
   local libdata = {
-    modname = library.modname,
+    modname = modname,
     header = library.header or library.modname,
     interfaces = {}, enums = library.enums or {},
     wrappers = {},

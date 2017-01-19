@@ -651,7 +651,7 @@ local IOPCEventSink = {
 }
 
 local opcda = {
-  modname = "opclib",
+  luamodule = "opc.da",
   header = "opcda",
   interfaces = {
     IOPCServer,
@@ -668,7 +668,7 @@ local opcda = {
 }
 
 local opcae = {
-  modname = "opcae",
+  luamodule = "opc.ae",
   header = "opc_ae",
   interfaces = { IOPCEventServer, IOPCEventSink },
   wrappers = { EventSink = { IOPCEventSink } },
@@ -676,7 +676,7 @@ local opcae = {
 }
 
 local opcsec = {
-  modname = "opcsec",
+  luamodule = "opc.security",
   header = "opcsec",
   interfaces = { IOPCSecurityPrivate },
   wrappers = {},

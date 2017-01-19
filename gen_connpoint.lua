@@ -49,7 +49,7 @@ local IConnectionPointContainer = {
 }
 
 local connpoint = {
-  modname = "connpoint",
+  luamodule = "opc.connpoint",
   header = "ocidl",
   interfaces = { IConnectionPointContainer, IConnectionPoint },
   builtin = true
