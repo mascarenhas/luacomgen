@@ -274,6 +274,35 @@ local IOPCItemIO = {
   },
 }
 
+local IOPCSyncIO2 = {
+  name = "IOPCSyncIO2",
+  iid = "{730F5F0F-55B1-4c81-9E18-FF8A0904E1FA}",
+  parent = IOPCSyncIO,
+  methods = {
+    {
+      name = "ReadMaxAge",
+      parameters = {
+        { type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
+        { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "phServer" },
+        { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pdwMaxAge" },
+        { type = types.array(types.variant), attributes = { out = true, size_is = "dwCount" }, name = "ppvValues" },
+        { type = types.array(types.word), attributes = { out = true, size_is = "dwCount" }, name = "ppwQualities" },
+        { type = types.array(FILETIME), attributes = { out = true, size_is = "dwCount" }, name = "ppftTimeStamps" },
+        { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
+      },
+    },
+    {
+      name = "WriteVQT",
+      parameters = {
+        { type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
+        { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "phServer" },
+        { type = types.array(OPCITEMVQT), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pItemVQT" },
+        { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
+      },
+    },
+  },
+}
+
 local IOPCGroupStateMgt = {
   name = "IOPCGroupStateMgt",
   iid = "{39c13a50-011e-11d0-9675-0020afd8adb3}",
@@ -656,6 +685,7 @@ local opcda = {
   interfaces = {
     IOPCServer,
     IOPCSyncIO,
+    IOPCSyncIO2,
     IOPCItemMgt,
     IOPCItemIO,
     IOPCGroupStateMgt,
