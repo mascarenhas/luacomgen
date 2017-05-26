@@ -259,6 +259,8 @@ extern "C" int luaopen_comgen(lua_State *L) {
   HRESULT hr = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
   if(SUCCEEDED(hr)) {
     lua_newtable(L);
+    lua_setfield(L, LUA_REGISTRYINDEX, "luacomgen_parentof");
+    lua_newtable(L);
     lua_setfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
     lua_newtable(L);
     lua_setfield(L, LUA_REGISTRYINDEX, "luacomgen_enums");

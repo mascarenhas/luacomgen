@@ -51,11 +51,16 @@ static int comgen_isinterface(lua_State *L, int stkidx, const char *siid) {
     lua_gettable(L, -2);
     if(!lua_isnil(L, -1)) {
       if(siid) {
+        lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_parentof");
         lua_pushstring(L, siid);
-        if(lua_rawequal(L, -1, -2)) {
-          lua_pop(L, 3);
-          return 1;
-        }
+        lua_pushvalue(L, -3);
+        do {
+          if(lua_rawequal(L, -1, -2)) {
+            lua_pop(L, 5);
+            return 1;
+          }
+          lua_gettable(L, -3);
+        } while(!lua_isnil(L, -1));
       } else {
         lua_pop(L, 2);
         return 1;
@@ -102,6 +107,10 @@ static void comgen_registermeta(lua_State *L, const char *iid_string, const char
 
 static void comgen_fillmethods(lua_State *L, const char *iid_parent_string,
                                const char *iid_string, const char *ifname, const luaL_Reg *methods) {
+  lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_parentof");
+  lua_pushstring(L, iid_parent_string);
+  lua_setfield(L, -2, iid_string);
+  lua_pop(L, 1);
   lua_newtable(L);
   int i = lua_gettop(L);
   lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
