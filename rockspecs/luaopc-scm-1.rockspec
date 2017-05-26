@@ -1,7 +1,8 @@
 package = "luaopc"
-version = "0.1-1"
+version = "scm-1"
 source = {
-	url = "..." -- We don't have one yet
+	url = "https://github.com/renatomaia/luacomgen/archive/master.zip",
+	dir = "luacomgen-master",
 }
 description = {
 	summary = "Lua binding of interfaces defined by the OPC foundation",

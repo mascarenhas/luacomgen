@@ -1,12 +1,13 @@
 package = "luacomgen"
-version = "0.1-1"
+version = "scm-1"
 source = {
-	url = "..." -- We don't have one yet
+		url = "https://github.com/renatomaia/luacomgen/archive/master.zip",
+		dir = "luacomgen-master",
 }
 description = {
 	summary = "Lua binding generator for COM interfaces.",
 	homepage = "https://github.com/mascarenhas/luacomgen/",
-	license = "MIT/X11",
+	license = "MIT",
 }
 dependencies = {
 	"lua >= 5.1, < 5.4"
