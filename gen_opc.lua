@@ -27,6 +27,18 @@ local OPCEUTYPE = {
   }
 }
 
+local OPCSERVERSTATE = {
+  name = "OPCSERVERSTATE",
+  fields = {
+    { name = "OPC_STATUS_RUNNING", value = 1 },
+    { name = "OPC_STATUS_FAILED", value = 2 },
+    { name = "OPC_STATUS_NOCONFIG", value = 3 },
+    { name = "OPC_STATUS_SUSPENDED", value = 4 },
+    { name = "OPC_STATUS_TEST", value = 5 },
+    { name = "OPC_STATUS_COMM_FAULT", value = 6 },
+  }
+}
+
 local HRESULT = {
   name = "HRESULT",
   fields = {
@@ -77,7 +89,7 @@ local OPCSERVERSTATUS = types.struct("OPCSERVERSTATUS", {
   { type = FILETIME, name = "ftStartTime" },
   { type = FILETIME, name = "ftCurrentTime" },
   { type = FILETIME, name = "ftLastUpdateTime" },
-  { type = types.dword, name = "dwServerState" },
+  { type = types.enum("OPCSERVERSTATE"), name = "dwServerState" },
   { type = types.dword, name = "dwGroupCount" },
   { type = types.dword, name = "dwBandWidth" },
   { type = types.word, name = "wMajorVersion" },
@@ -694,7 +706,7 @@ local opcda = {
     IEnumOPCItemAttributes,
   },
   wrappers = { DataCallback = { IOPCDataCallback } },
-  enums = { OPCDATASOURCE, OPCEUTYPE, HRESULT, types.vartype }
+  enums = { OPCDATASOURCE, OPCEUTYPE, OPCSERVERSTATE, HRESULT, types.vartype }
 }
 
 local opcae = {
