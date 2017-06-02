@@ -637,7 +637,8 @@ $parameters[[$if{push}[[    $push{name, type, attr}
 $if{clear}[[    $clear{name, type, attr}
 ]]]]    return $nresults;
   } else {
-    return comgen_error(L, __hr);
+$parameters[[$if{clear and attr["in"] ~= nil}[[    $clear{name, type, attr}
+]]]]    return comgen_error(L, __hr);
   }
 }
 ]]

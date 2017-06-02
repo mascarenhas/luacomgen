@@ -497,11 +497,14 @@ comtypes = {
              local type = args[2]
              local attr = args[3]
              if attr and attr.iid_is then
-               return "comgen_pushinterface(L, " .. args[1] .. ", __" .. attr.iid_is .. "_siid);"
+               return args[1] .. "->AddRef(); comgen_pushinterface(L, " .. args[1] .. ", __" .. attr.iid_is .. "_siid);"
              else
-               return "comgen_pushinterface(L, " .. args[1] .. ", \"" .. type.iid .. "\");"
+               return args[1] .. "->AddRef(); comgen_pushinterface(L, " .. args[1] .. ", \"" .. type.iid .. "\");"
              end
            end,
+    clear = function (args)
+              return args[1] .. "->Release();"
+            end
   },
   refiid = {
     ctype = function (type)
