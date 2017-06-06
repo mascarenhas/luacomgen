@@ -388,19 +388,42 @@ comtypes = {
               return "VariantClear(&" .. args[1] .. ");"
             end,
   },
-  bstring = {
-    vt = "BSTR",
-    ctype = function (type)
-              return "BSTR"
+  string = {
+    ctype = function (type, attr)
+              if attr.ctype then return attr.ctype end
+              if attr["in"] and not attr.out and not attr.ref then
+                return "LPCSTR"
+              else
+                return "LPSTR"
+              end
             end,
     set = function (args)
-            return args[1] .. " = comgen_tobstr(L, " .. args[2] .. ");"
+            return args[1] .. " = comgen_tocstr(L, " .. args[2] .. ");"
           end,
     push = function (args)
-             return "comgen_pushbstr(L, " .. args[1] .. ");"
+             return "comgen_pushcstr(L, " .. args[1] .. ");"
            end,
     clear = function (args)
-              return "SysFreeString(" .. args[1] .. ");"
+              return "comgen_clearcstr((LPSTR)" .. args[1] .. ");"
+            end,
+  },
+  wstring = {
+    ctype = function (type, attr)
+              if attr.ctype then return attr.ctype end
+              if attr["in"] and not attr.out and not attr.ref then
+                return "LPCWSTR"
+              else
+                return "LPWSTR"
+              end
+            end,
+    set = function (args)
+            return args[1] .. " = comgen_towstr(L, " .. args[2] .. ");"
+          end,
+    push = function (args)
+             return "comgen_pushwstr(L, " .. args[1] .. ");"
+           end,
+    clear = function (args)
+              return "comgen_clearwstr((wchar_t *)" .. args[1] .. ");"
             end,
   },
   tstring = {
@@ -422,23 +445,19 @@ comtypes = {
               return "comgen_cleartstr((TCHAR*)" .. args[1] .. ");"
             end,
   },
-  wstring = {
-    ctype = function (type, attr)
-              if attr.ctype then return attr.ctype end
-              if attr["in"] and not attr.out and not attr.ref then
-                return "LPCWSTR"
-              else
-                return "LPWSTR"
-              end
+  bstring = {
+    vt = "BSTR",
+    ctype = function (type)
+              return "BSTR"
             end,
     set = function (args)
-            return args[1] .. " = comgen_towstr(L, " .. args[2] .. ");"
+            return args[1] .. " = comgen_tobstr(L, " .. args[2] .. ");"
           end,
     push = function (args)
-             return "comgen_pushwstr(L, " .. args[1] .. ");"
+             return "comgen_pushbstr(L, " .. args[1] .. ");"
            end,
     clear = function (args)
-              return "comgen_clearwstr((wchar_t *)" .. args[1] .. ");"
+              return "comgen_clearbstr(" .. args[1] .. ");"
             end,
   },
   safearray = {
@@ -467,22 +486,6 @@ comtypes = {
     clear = function (args)
               return "SafeArrayDestroy(" .. args[1] .. ");"
             end
-  },
-  string = {
-    ctype = function (type, attr)
-              if attr.ctype then return attr.ctype end
-              if attr["in"] and not attr.out and not attr.ref then
-                return "LPCSTR"
-              else
-                return "LPSTR"
-              end
-            end,
-    set = function (args)
-            return args[1] .. " = (LPSTR)lua_tostring(L, " .. args[2] .. ");"
-          end,
-    push = function (args)
-             return "lua_pushstring(L, " .. args[1] .. ");"
-           end
   },
   interface = {
     vt = "UNKNOWN",
