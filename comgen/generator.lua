@@ -669,20 +669,20 @@ function _M.compile_method(method)
       pdata.pass = "&" .. param.name
       pdata.push = comtypes[typename].push
     end
-    if attr.unique then
-      pdata.pass = "NULL"
-    end
     if attr.retval then
       mdata.nresults = mdata.nresults + 1
       pdata.pass = "&" .. param.name
       mdata.pushret = comtypes[typename].push{ param.name, param.type, param.attr }
     end
-    if attr["in"] and not attr.unique then
-      pos = pos + 1
-      pdata.set = comtypes[typename].set
-    end
-    if attr.ref and not attr.out and not attr.retval then
+    if (attr.ref or attr.unique) and not attr.out and not attr.retval then
       pdata.pass = "&" .. param.name
+    end
+    if attr["in"] then
+      if attr.unique then
+        pdata.pass = "(lua_isnil(L, "..pos..") ? NULL : "..pdata.pass..")"
+      end
+      pdata.set = comtypes[typename].set
+      pos = pos + 1
     end
     table.insert(mdata.parameters, pdata)
   end
