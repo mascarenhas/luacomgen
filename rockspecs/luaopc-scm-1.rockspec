@@ -12,15 +12,14 @@ description = {
 		vendors that shall inter-operate seamlessly together.
 	]],
 	homepage = "https://github.com/mascarenhas/luacomgen/tree/master/opc",
-	license = "MIT/X11",
+	license = "MIT",
 }
 dependencies = {
 	"lua >= 5.2, < 5.4",
 }
 
 local libs = { "ole32", "oleaut32" }
---local libs = { "ole32", "oleaut32", "shlwapi", "htmlhelp", "atls" }
-local vars-- = { CFLAGS = "-EHsc" }
+local vars = { CFLAGS = "-EHsc" }
 build = {
 	type = "builtin",
 	modules = {
