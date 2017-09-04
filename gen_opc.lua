@@ -18,6 +18,27 @@ local OPCDATASOURCE = {
   }
 }
 
+local OPCEUTYPE = {
+  name = "OPCEUTYPE",
+  fields = {
+    { name = "OPC_NOENUM", value = 0 },
+    { name = "OPC_ANALOG", value = 1 },
+    { name = "OPC_ENUMERATED", value = 2 },
+  }
+}
+
+local OPCSERVERSTATE = {
+  name = "OPCSERVERSTATE",
+  fields = {
+    { name = "OPC_STATUS_RUNNING", value = 1 },
+    { name = "OPC_STATUS_FAILED", value = 2 },
+    { name = "OPC_STATUS_NOCONFIG", value = 3 },
+    { name = "OPC_STATUS_SUSPENDED", value = 4 },
+    { name = "OPC_STATUS_TEST", value = 5 },
+    { name = "OPC_STATUS_COMM_FAULT", value = 6 },
+  }
+}
+
 local HRESULT = {
   name = "HRESULT",
   fields = {
@@ -68,7 +89,7 @@ local OPCSERVERSTATUS = types.struct("OPCSERVERSTATUS", {
   { type = FILETIME, name = "ftStartTime" },
   { type = FILETIME, name = "ftCurrentTime" },
   { type = FILETIME, name = "ftLastUpdateTime" },
-  { type = types.dword, name = "dwServerState" },
+  { type = types.enum("OPCSERVERSTATE"), name = "dwServerState" },
   { type = types.dword, name = "dwGroupCount" },
   { type = types.dword, name = "dwBandWidth" },
   { type = types.word, name = "wMajorVersion" },
@@ -76,6 +97,21 @@ local OPCSERVERSTATUS = types.struct("OPCSERVERSTATUS", {
   { type = types.word, name = "wBuildNumber" },
   { type = types.word, name = "wReserved" },
   { type = types.wstring, name = "szVendorInfo" }
+})
+
+local OPCITEMATTRIBUTES = types.struct("OPCITEMATTRIBUTES", {
+  { type = types.wstring, name = "szAccessPath" },
+  { type = types.wstring, name = "szItemID" },
+  { type = types.bool, name = "bActive" },
+  { type = types.dword, name = "hClient" },
+  { type = types.dword, name = "hServer" },
+  { type = types.dword, name = "dwAccessRights" },
+  { type = types.dword, name = "dwBlobSize" },
+  { type = types.array(types.byte,  { size_is = "dwBlobSize" }), name = "pBlob" },
+  { type = types.enum("VARTYPE"), name = "vtRequestedDataType" },
+  { type = types.enum("VARTYPE"), name = "vtCanonicalDataType" },
+  { type = types.enum("OPCEUTYPE"), name = "dwEUType" },
+  { type = types.variant, name = "vEUInfo" },
 })
 
 local IOPCServer = {
@@ -97,14 +133,14 @@ local IOPCServer = {
         { type = types.dword, attributes = { out = true }, name = "pRevisedUpdateRate" },
         { type = types.refiid, attributes = { ["in"] = true }, name = "riid" },
         { type = types.interface(IUnknown), attributes = { ["out"] = true, iid_is = "riid" }, name = "ppUnk" },
-      }
+      },
     },
     {
       name = "RemoveGroup",
       parameters = {
         { type = types.dword, attributes = { ["in"] = true }, name = "hServerGroup" },
         { type = types.bool, attributes = { ["in"] = true }, name = "bForce" },
-      }
+      },
     },
     {
       name = "GetStatus",
@@ -116,9 +152,9 @@ local IOPCServer = {
         { type = types.hresult, attributes = { ["in"] = true }, name = "dwError" },
         { type = types.dword, attributes = { ["in"] = true }, name = "dwLocale" },
         { type = types.wstring, attributes = { out = true }, name = "ppString" }
-      }
-    }
-  }
+      },
+    },
+  },
 }
 
 local IOPCItemProperties = {
@@ -137,7 +173,7 @@ local IOPCItemProperties = {
           name = "ppDescriptions" },
         { type = types.array(types.enum("VARTYPE")), attributes = { out = true, size_is = "pdwCount" },
           name = "ppvtDataTypes" },
-      }
+      },
     },
     {
       name = "GetItemProperties",
@@ -148,9 +184,9 @@ local IOPCItemProperties = {
           name = "pdwPropertyIDs" },
         { type = types.array(types.variant), attributes = { out = true, size_is = "dwCount" }, name = "ppvData" },
         { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
-      }
-    }
-  }
+      },
+    },
+  },
 }
 
 local IOPCItemMgt = {
@@ -165,7 +201,7 @@ local IOPCItemMgt = {
         { type = types.array(OPCITEMDEF), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pItemArray" },
         { type = types.array(OPCITEMRESULT), attributes = { out = true, size_is = "dwCount" }, name = "ppAddResults" },
         { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
-      }
+      },
     },
     {
       name = "RemoveItems",
@@ -173,9 +209,25 @@ local IOPCItemMgt = {
         { type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
         { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "phServer" },
         { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
-      }
-    }
-  }
+      },
+    },
+    {
+      name = "SetActiveState",
+      parameters = {
+        { type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
+        { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "phServer" },
+        { type = types.bool, attributes = { ["in"] = true }, name = "bActive" },
+        { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
+      },
+    },
+    {
+      name = "CreateEnumerator",
+      parameters = {
+        { type = types.refiid, attributes = { ["in"] = true }, name = "riid" },
+        { type = types.interface(IUnknown), attributes = { ["out"] = true, iid_is = "riid" }, name = "ppUnk" },
+      },
+    },
+  },
 }
 
 local IOPCSyncIO = {
@@ -191,7 +243,7 @@ local IOPCSyncIO = {
         { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "phServer" },
         { type = types.array(OPCITEMSTATE), attributes = { out = true, size_is = "dwCount" }, name = "ppItemValues" },
         { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
-      }
+      },
     },
     {
       name = "Write",
@@ -200,9 +252,9 @@ local IOPCSyncIO = {
         { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "phServer" },
         { type = types.array(types.variant), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pItemValues" },
         { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
-      }
-    }
-  }
+      },
+    },
+  },
 }
 
 local IOPCItemIO = {
@@ -220,7 +272,7 @@ local IOPCItemIO = {
         { type = types.array(types.word), attributes = { out = true, size_is = "dwCount" }, name = "ppwQualities" },
         { type = types.array(FILETIME), attributes = { out = true, size_is = "dwCount" }, name = "ppftTimeStamps" },
         { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
-      }
+      },
     },
     {
       name = "WriteVQT",
@@ -229,9 +281,112 @@ local IOPCItemIO = {
         { type = types.array(types.wstring), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pszItemIDs" },
         { type = types.array(OPCITEMVQT), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pItemVQT" },
         { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
-      }
-    }
-  }
+      },
+    },
+  },
+}
+
+local IOPCSyncIO2 = {
+  name = "IOPCSyncIO2",
+  iid = "{730F5F0F-55B1-4c81-9E18-FF8A0904E1FA}",
+  parent = IOPCSyncIO,
+  methods = {
+    {
+      name = "ReadMaxAge",
+      parameters = {
+        { type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
+        { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "phServer" },
+        { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pdwMaxAge" },
+        { type = types.array(types.variant), attributes = { out = true, size_is = "dwCount" }, name = "ppvValues" },
+        { type = types.array(types.word), attributes = { out = true, size_is = "dwCount" }, name = "ppwQualities" },
+        { type = types.array(FILETIME), attributes = { out = true, size_is = "dwCount" }, name = "ppftTimeStamps" },
+        { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
+      },
+    },
+    {
+      name = "WriteVQT",
+      parameters = {
+        { type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
+        { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "phServer" },
+        { type = types.array(OPCITEMVQT), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pItemVQT" },
+        { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" }, name = "ppErrors" },
+      },
+    },
+  },
+}
+
+local IOPCGroupStateMgt = {
+  name = "IOPCGroupStateMgt",
+  iid = "{39c13a50-011e-11d0-9675-0020afd8adb3}",
+  parent = IUnknown,
+  methods = {
+    {
+      name = "GetState",
+      parameters = {
+        { type = types.dword, attributes = { out = true }, name = "pUpdateRate" },
+        { type = types.bool, attributes = { out = true }, name = "pActive" },
+        { type = types.wstring, attributes = { out = true }, name = "ppName" },
+        { type = types.long, attributes = { out = true }, name = "pTimeBias" },
+        { type = types.float, attributes = { out = true }, name = "pPercentDeadBand" },
+        { type = types.dword, attributes = { out = true }, name = "pLCID" },
+        { type = types.dword, attributes = { out = true }, name = "phClientGroup" },
+        { type = types.dword, attributes = { out = true }, name = "phServerGroup" },
+      },
+    },
+    {
+      name = "SetState",
+      parameters = {
+        { type = types.dword, attributes = { ["in"] = true, unique = true }, name = "pRequestedUpdateRate" },
+        { type = types.dword, attributes = { out = true }, name = "pRevisedUpdateRate" },
+        { type = types.bool, attributes = { ["in"] = true, unique = true }, name = "pActive" },
+        { type = types.long, attributes = { ["in"] = true, unique = true }, name = "pTimeBias" },
+        { type = types.float, attributes = { ["in"] = true, unique = true }, name = "pPercentDeadBand" },
+        { type = types.dword, attributes = { ["in"] = true, unique = true }, name = "pLCID" },
+        { type = types.dword, attributes = { ["in"] = true, unique = true }, name = "phClientGroup" },
+      },
+    },
+    {
+      name = "SetName",
+      parameters = {
+        { type = types.wstring, attributes = { ["in"] = true }, name = "szName" },
+      },
+    },
+    {
+      name = "CloneGroup",
+      parameters = {
+        { type = types.wstring, attributes = { ["in"] = true }, name = "szName" },
+        { type = types.refiid, attributes = { ["in"] = true }, name = "riid" },
+        { type = types.interface(IUnknown), attributes = { ["out"] = true, iid_is = "riid" }, name = "ppUnk" },
+      },
+    },
+  },
+}
+
+local IEnumOPCItemAttributes = {
+  name = "IEnumOPCItemAttributes",
+  iid = "{39c13a55-011e-11d0-9675-0020afd8adb3}",
+  parent = IUnknown,
+  methods = {
+    {
+      name = "Next",
+      parameters = {
+        { type = types.dword, attributes = { ["in"] = true }, name = "celt" },
+        { type = types.array(OPCITEMATTRIBUTES), attributes = { out = true, size_is = "pceltFetched" }, name = "ppItemArray" },
+        { type = types.dword, attributes = { out = true }, name = "pceltFetched" },
+      },
+    },
+    {
+      name = "Skip",
+      parameters = {
+        { type = types.dword, attributes = { ["in"] = true }, name = "celt" },
+      },
+    },
+    {
+      name = "Reset",
+      parameters = {
+      },
+    },
+  },
 }
 
 local IOPCDataCallback = {
@@ -252,7 +407,7 @@ local IOPCDataCallback = {
         { type = types.array(types.word), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pwQualities" },
         { type = types.array(FILETIME), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pftTimeStamps" },
         { type = types.array(types.hresult), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pErrors" },
-      }
+      },
     },
     {
       name = "OnReadComplete",
@@ -267,7 +422,7 @@ local IOPCDataCallback = {
         { type = types.array(types.word), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pwQualities" },
         { type = types.array(FILETIME), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pftTimeStamps" },
         { type = types.array(types.hresult), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pErrors" },
-      }
+      },
     },
     {
       name = "OnWriteComplete",
@@ -278,16 +433,16 @@ local IOPCDataCallback = {
         { type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
         { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "phClienthandles" },
         { type = types.array(types.hresult), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pErrors" },
-      }
+      },
     },
     {
       name = "OnCancelComplete",
       parameters = {
         { type = types.dword, attributes = { ["in"] = true }, name = "dwTransid" },
         { type = types.dword, attributes = { ["in"] = true }, name = "hGroup" },
-      }
-    }
-  }
+      },
+    },
+  },
 }
 
 local IOPCSecurityPrivate = {
@@ -299,20 +454,20 @@ local IOPCSecurityPrivate = {
       name = "IsAvailablePriv",
       parameters = {
         { type = types.bool, attributes = { out = true }, name = "pbAvailable" }
-      }
+      },
     },
     {
       name = "Logon",
       parameters = {
         { type = types.wstring, attributes = { ["in"] = true }, name = "szUserID" },
         { type = types.wstring, attributes = { ["in"] = true }, name = "szPassword" }
-      }
+      },
     },
     {
       name = "Logoff",
       parameters = {}
-    }
-  }
+    },
+  },
 }
 
 local OPCEVENTSERVERSTATE = {
@@ -400,7 +555,7 @@ local IOPCEventServer = {
       name = "GetStatus",
       parameters = {
         { type = types.array(OPCEVENTSERVERSTATUS), attributes = { out = true, size_is = "1" }, name = "ppEventServerStatus" }
-      }
+      },
     },
     {
       name  = "CreateEventSubscription",
@@ -413,13 +568,13 @@ local IOPCEventServer = {
         { type = types.interface(IUnknown), attributes = { ["out"] = true, iid_is = "riid" }, name = "ppUnk" },
         { type = types.dword, attributes = { out = true }, name = "pdwRevisedBufferTime" },
         { type = types.dword, attributes = { out = true }, name = "pdwRevisedMaxTime" },
-      }
+      },
     },
     {
       name = "QueryAvailableFilters",
       parameters = {
         { type = types.dword, attributes = { out = true }, name = "pdwFilterMask" }
-      }
+      },
     },
     {
       name = "QueryEventCategories",
@@ -428,7 +583,7 @@ local IOPCEventServer = {
         { type = types.dword, attributes = { out = true }, name = "pdwCount" },
             { type = types.array(types.dword), attributes = { out = true, size_is = "pdwCount" }, name = "ppdwEventCategories" },
             { type = types.array(types.wstring), attributes = { out = true, size_is = "pdwCount" }, name = "ppEventCategoryDescs" },
-      }
+      },
     },
     {
       name = "QueryConditionNames",
@@ -436,7 +591,7 @@ local IOPCEventServer = {
         { type = types.dword, attributes = { ["in"] = true }, name = "dwEventCategory" },
         { type = types.dword, attributes = { out = true }, name = "pdwCount" },
             { type = types.array(types.wstring), attributes = { out = true, size_is = "pdwCount" }, name = "ppszConditionNames" },
-      }
+      },
     },
     {
       name = "QuerySubConditionNames",
@@ -444,7 +599,7 @@ local IOPCEventServer = {
         { type = types.wstring, attributes = { ["in"] = true, ctype = "LPWSTR" }, name = "szConditionName" },
         { type = types.dword, attributes = { out = true }, name = "pdwCount" },
             { type = types.array(types.wstring), attributes = { out = true, size_is = "pdwCount" }, name = "ppszSubConditionNames" },
-      }
+      },
     },
     {
       name = "QuerySourceConditions",
@@ -452,7 +607,7 @@ local IOPCEventServer = {
         { type = types.wstring, attributes = { ["in"] = true, ctype = "LPWSTR" }, name = "szSource" },
         { type = types.dword, attributes = { out = true }, name = "pdwCount" },
             { type = types.array(types.wstring), attributes = { out = true, size_is = "pdwCount" }, name = "ppszConditionNames" },
-      }
+      },
     },
     {
       name = "QueryEventAttributes",
@@ -462,7 +617,7 @@ local IOPCEventServer = {
             { type = types.array(types.dword), attributes = { out = true, size_is = "pdwCount" }, name = "ppdwAttrIDs" },
             { type = types.array(types.wstring), attributes = { out = true, size_is = "pdwCount" }, name = "ppszAttrDescs" },
             { type = types.array(types.enum("VARTYPE")), attributes = { out = true, size_is = "pdwCount" }, name = "ppvtAttrTypes" },
-      }
+      },
     },
     {
       name = "TranslateToItemIDs",
@@ -476,7 +631,7 @@ local IOPCEventServer = {
             { type = types.array(types.wstring), attributes = { out = true, size_is = "dwCount" }, name = "ppszAttrDescs" },
             { type = types.array(types.wstring), attributes = { out = true, size_is = "dwCount" }, name = "ppszNodeNames" },
         { type = types.array(types.refiid), attributes = { out = true, size_is = "dwCount" } , name = "ppCLSIDs" },
-      }
+      },
     },
     {
       name = "GetConditionState",
@@ -486,7 +641,7 @@ local IOPCEventServer = {
         { type = types.dword, attributes = { ["in"] = true }, name = "dwNumEventAttrs" },
             { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwNumEventAttrs" }, name = "pdwAttributeIDs" },
         { type = types.array(OPCCONDITIONSTATE), attributes = { out = true, size_is = "1" }, name = "ppConditionState" },
-      }
+      },
     },
     {
       name = "AckCondition",
@@ -499,21 +654,21 @@ local IOPCEventServer = {
             { type = types.array(FILETIME), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pftActiveTime" },
             { type = types.array(types.dword), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pdwCookie" },
         { type = types.array(types.hresult), attributes = { out = true, size_is = "dwCount" } , name = "pErrors" },
-      }
+      },
     },
     {
       name = "EnableConditionBySource",
       parameters = {
         { type = types.dword, attributes = { ["in"] = true }, name = "dwNumSources" },
             { type = types.array(types.wstring), attributes = { ["in"] = true, size_is = "dwNumSources", ctype = "LPWSTR" }, name = "pszSources" },
-      }
+      },
     },
     {
       name = "DisableConditionBySource",
       parameters = {
         { type = types.dword, attributes = { ["in"] = true }, name = "dwNumSources" },
             { type = types.array(types.wstring), attributes = { ["in"] = true, size_is = "dwNumSources", ctype = "LPWSTR" }, name = "pszSources" },
-      }
+      },
     },
   }
 }
@@ -531,21 +686,31 @@ local IOPCEventSink = {
         { type = types.bool, attributes = { ["in"] = true }, name = "bLastRefresh" },
         { type = types.dword, attributes = { ["in"] = true }, name = "dwCount" },
             { type = types.array(ONEVENTSTRUCT), attributes = { ["in"] = true, size_is = "dwCount" }, name = "pEvents" },
-      }
-    }
-  }
+      },
+    },
+  },
 }
 
 local opcda = {
-  modname = "opclib",
+  luamodule = "opc.da",
   header = "opcda",
-  interfaces = { IOPCServer, IOPCSyncIO, IOPCItemMgt, IOPCItemIO, IOPCDataCallback, IOPCItemProperties },
+  interfaces = {
+    IOPCServer,
+    IOPCSyncIO,
+    IOPCSyncIO2,
+    IOPCItemMgt,
+    IOPCItemIO,
+    IOPCGroupStateMgt,
+    IOPCDataCallback,
+    IOPCItemProperties,
+    IEnumOPCItemAttributes,
+  },
   wrappers = { DataCallback = { IOPCDataCallback } },
-  enums = { OPCDATASOURCE, HRESULT, types.vartype }
+  enums = { OPCDATASOURCE, OPCEUTYPE, OPCSERVERSTATE, HRESULT, types.vartype }
 }
 
 local opcae = {
-  modname = "opcae",
+  luamodule = "opc.ae",
   header = "opc_ae",
   interfaces = { IOPCEventServer, IOPCEventSink },
   wrappers = { EventSink = { IOPCEventSink } },
@@ -553,7 +718,7 @@ local opcae = {
 }
 
 local opcsec = {
-  modname = "opcsec",
+  luamodule = "opc.security",
   header = "opcsec",
   interfaces = { IOPCSecurityPrivate },
   wrappers = {},

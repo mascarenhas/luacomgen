@@ -51,11 +51,16 @@ static int comgen_isinterface(lua_State *L, int stkidx, const char *siid) {
     lua_gettable(L, -2);
     if(!lua_isnil(L, -1)) {
       if(siid) {
+        lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_parentof");
         lua_pushstring(L, siid);
-        if(lua_rawequal(L, -1, -2)) {
-          lua_pop(L, 3);
-          return 1;
-        }
+        lua_pushvalue(L, -3);
+        do {
+          if(lua_rawequal(L, -1, -2)) {
+            lua_pop(L, 5);
+            return 1;
+          }
+          lua_gettable(L, -3);
+        } while(!lua_isnil(L, -1));
       } else {
         lua_pop(L, 2);
         return 1;
@@ -102,6 +107,10 @@ static void comgen_registermeta(lua_State *L, const char *iid_string, const char
 
 static void comgen_fillmethods(lua_State *L, const char *iid_parent_string,
                                const char *iid_string, const char *ifname, const luaL_Reg *methods) {
+  lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_parentof");
+  lua_pushstring(L, iid_parent_string);
+  lua_setfield(L, -2, iid_string);
+  lua_pop(L, 1);
   lua_newtable(L);
   int i = lua_gettop(L);
   lua_getfield(L, LUA_REGISTRYINDEX, "luacomgen_metatables");
@@ -111,7 +120,7 @@ static void comgen_fillmethods(lua_State *L, const char *iid_parent_string,
   lua_settop(L, i);
   lua_pushvalue(L, -1);
   lua_setmetatable(L, -2);
-  luaL_register(L, NULL, methods);
+  luaL_setfuncs(L, methods, 0);
   comgen_registermeta(L, iid_string, ifname);
 }
 
@@ -140,14 +149,27 @@ $fields[[  { "$name", $value },
 
 ]]
 
+static LPSTR comgen_tocstr(lua_State *L, int stkidx) {
+  size_t len;
+  const char *s = lua_tolstring(L, stkidx, &len);
+  LPSTR cs = (LPSTR)CoTaskMemAlloc(len);
+  memcpy(cs, s, len);
+  return cs;
+}
+static void comgen_pushcstr(lua_State *L, LPSTR cs) {
+  lua_pushstring(L, cs);
+}
+static void comgen_clearcstr(LPSTR cs) {
+  CoTaskMemFree(cs);
+}
+
 static wchar_t *comgen_towstr(lua_State *L, int stkidx) {
   const char *s = lua_tostring(L, stkidx);
   int size = MultiByteToWideChar(CP_UTF8, 0, s, -1, 0, 0);
-  wchar_t *ws = new wchar_t[size];
+  wchar_t *ws = (wchar_t *)CoTaskMemAlloc(size*sizeof(wchar_t));
   MultiByteToWideChar(CP_UTF8, 0, s, -1, ws, size);
   return ws;
 }
-
 static void comgen_pushwstr(lua_State *L, wchar_t *ts) {
   int size = WideCharToMultiByte(CP_UTF8, 0, ts, -1, /* s */ 0, /* size */ 0, 0, 0);
   char *s = new char[size];
@@ -155,44 +177,43 @@ static void comgen_pushwstr(lua_State *L, wchar_t *ts) {
   lua_pushstring(L, s);
   delete s;
 }
-
 static void comgen_clearwstr(wchar_t *ws) {
-  #ifdef UNICODE
-    delete ws;
-  #endif
+  CoTaskMemFree(ws);
 }
 
 static BSTR comgen_tobstr(lua_State *L, int stkidx) {
   wchar_t *ws = comgen_towstr(L, stkidx);
   BSTR b = SysAllocString(ws);
-  delete ws;
+  comgen_clearwstr(ws);
   return b;
 }
-
 static void comgen_pushbstr(lua_State *L, BSTR b) {
   b = b ? b : OLESTR("");
   comgen_pushwstr(L, b);
+}
+static void comgen_clearbstr(BSTR b) {
+  SysFreeString(b);
 }
 
 static TCHAR *comgen_totstr(lua_State *L, int stkidx) {
   #ifdef UNICODE
     return comgen_towstr(L, stkidx);
   #else
-    return (TCHAR*)lua_tostring(L, stkidx);
+    return comgen_tocstr(L, stkidx);
   #endif
 }
-
 static void comgen_pushtstr(lua_State *L, TCHAR *ts) {
   #ifdef UNICODE
     comgen_pushwstr(L, ts);
   #else
-    lua_pushstring(L, ts);
+    comgen_pushcstr(L, ts);
   #endif
 }
-
 static void comgen_cleartstr(TCHAR *ts) {
   #ifdef UNICODE
     comgen_clearwstr(ts);
+  #else
+    comgen_clearcstr(ts);
   #endif
 }
 
@@ -305,7 +326,7 @@ static void comgen_clear_safearray(SAFEARRAY *parr);
 
 static void comgen_create_safearray(lua_State *L, VARTYPE vt, VARIANT *var) {
   var->vt = vt | VT_ARRAY;
-  size_t n = lua_objlen(L, -1);
+  size_t n = lua_rawlen(L, -1);
   var->parray = SafeArrayCreateVector(vt, 0, n);
   if(!var->parray) { luaL_error(L, "could not create safearray of size %i", n); }
   char *data;
@@ -628,7 +649,8 @@ $parameters[[$if{push}[[    $push{name, type, attr}
 $if{clear}[[    $clear{name, type, attr}
 ]]]]    return $nresults;
   } else {
-    return comgen_error(L, __hr);
+$parameters[[$if{clear and attr["in"] ~= nil}[[    $clear{name, type, attr}
+]]]]    return comgen_error(L, __hr);
   }
 }
 ]]
@@ -654,7 +676,7 @@ $interfaces[[
 $enums[[
   comgen_registerenum(L, "$name", $(name)_fields);
 ]]
-  luaL_register(L, "$modname", $(modname)_functions);
+  luaL_newlib(L, $(modname)_functions);
 $interfaces[[
   lua_pushstring(L, IID_$(ifname)_String);
   lua_setfield(L, -2, "$ifname");

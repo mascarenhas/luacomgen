@@ -65,59 +65,71 @@ static void *comgen_checkinterface(lua_State *L, int stkidx, const char *siid) {
   return 0;
 }
 
+static LPSTR comgen_tocstr(lua_State *L, int stkidx) {
+  size_t len;
+  const char *s = lua_tolstring(L, stkidx, &len);
+  LPSTR cs = (LPSTR)CoTaskMemAlloc(len);
+  memcpy(cs, s, len);
+  return cs;
+}
+static void comgen_pushcstr(lua_State *L, LPSTR cs) {
+  lua_pushstring(L, cs);
+}
+static void comgen_clearcstr(LPSTR cs) {
+  CoTaskMemFree(cs);
+}
+
 static wchar_t *comgen_towstr(lua_State *L, int stkidx) {
   const char *s = lua_tostring(L, stkidx);
   int size = MultiByteToWideChar(CP_UTF8, 0, s, -1, 0, 0);
-  wchar_t *ws = new wchar_t[size];
+  wchar_t *ws = (wchar_t *)CoTaskMemAlloc(size*sizeof(wchar_t));
   MultiByteToWideChar(CP_UTF8, 0, s, -1, ws, size);
   return ws;
 }
-
-static void comgen_pushwstr(lua_State *L, const wchar_t *ts) {
+static void comgen_pushwstr(lua_State *L, wchar_t *ts) {
   int size = WideCharToMultiByte(CP_UTF8, 0, ts, -1, /* s */ 0, /* size */ 0, 0, 0);
   char *s = new char[size];
   WideCharToMultiByte(CP_UTF8, 0, ts, -1, s, size, 0, 0);
   lua_pushstring(L, s);
   delete s;
 }
-
 static void comgen_clearwstr(wchar_t *ws) {
-  #ifdef UNICODE
-    delete ws;
-  #endif
+  CoTaskMemFree(ws);
 }
 
 static BSTR comgen_tobstr(lua_State *L, int stkidx) {
   wchar_t *ws = comgen_towstr(L, stkidx);
   BSTR b = SysAllocString(ws);
-  delete ws;
+  comgen_clearwstr(ws);
   return b;
 }
-
 static void comgen_pushbstr(lua_State *L, BSTR b) {
   b = b ? b : OLESTR("");
   comgen_pushwstr(L, b);
+}
+static void comgen_clearbstr(BSTR b) {
+  SysFreeString(b);
 }
 
 static TCHAR *comgen_totstr(lua_State *L, int stkidx) {
   #ifdef UNICODE
     return comgen_towstr(L, stkidx);
   #else
-    return (TCHAR*)lua_tostring(L, stkidx);
+    return comgen_tocstr(L, stkidx);
   #endif
 }
-
-static void comgen_pushtstr(lua_State *L, const TCHAR *ts) {
+static void comgen_pushtstr(lua_State *L, TCHAR *ts) {
   #ifdef UNICODE
     comgen_pushwstr(L, ts);
   #else
-    lua_pushstring(L, ts);
+    comgen_pushcstr(L, ts);
   #endif
 }
-
 static void comgen_cleartstr(TCHAR *ts) {
   #ifdef UNICODE
     comgen_clearwstr(ts);
+  #else
+    comgen_clearcstr(ts);
   #endif
 }
 
@@ -229,7 +241,7 @@ static void comgen_clear_safearray(SAFEARRAY *parr);
 
 static void comgen_create_safearray(lua_State *L, VARTYPE vt, VARIANT *var) {
   var->vt = vt | VT_ARRAY;
-  size_t n = lua_objlen(L, -1);
+  size_t n = lua_rawlen(L, -1);
   var->parray = SafeArrayCreateVector(vt, 0, n);
   if(!var->parray) { throw E_OUTOFMEMORY; }
   char *data;

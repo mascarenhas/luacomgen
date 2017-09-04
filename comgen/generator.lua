@@ -63,8 +63,8 @@ local template_clear_struct = cosmo.compile[=[
 local template_set_array = cosmo.compile[=[
   $if{set}[[
     { int __pos_$(strip(stkidx));
-    if(lua_objlen(L, $stkidx) != $size)
-      luaL_error(L, "array size does not match, expected: %i, actual: %i", $size, lua_objlen(L, $stkidx));
+    if(lua_rawlen(L, $stkidx) != $size)
+      luaL_error(L, "array size does not match, expected: %i, actual: %i", $size, lua_rawlen(L, $stkidx));
     $var = ($ctype *)CoTaskMemAlloc($size * sizeof($ctype));
     for(size_t $idx = 0; $idx < $size; $idx++) {
       lua_rawgeti(L, $stkidx, $idx + 1);
@@ -96,7 +96,7 @@ local template_clear_array = cosmo.compile[=[
 ]=]
 
 local template_set_safearray = cosmo.compile[=[
-  size_t __$(name)_n = lua_objlen(L, $stkidx);
+  size_t __$(name)_n = lua_rawlen(L, $stkidx);
   $name = SafeArrayCreateVector(comgen_name2vt(L, "$(elem.vt)"), $lbound, __$(name)_n);
   if(!$name) luaL_error(L, "could not create SAFEARRAY $name");
   $(elem.ctype) * __$(name)_elems;
@@ -388,19 +388,42 @@ comtypes = {
               return "VariantClear(&" .. args[1] .. ");"
             end,
   },
-  bstring = {
-    vt = "BSTR",
-    ctype = function (type)
-              return "BSTR"
+  string = {
+    ctype = function (type, attr)
+              if attr.ctype then return attr.ctype end
+              if attr["in"] and not attr.out and not attr.ref then
+                return "LPCSTR"
+              else
+                return "LPSTR"
+              end
             end,
     set = function (args)
-            return args[1] .. " = comgen_tobstr(L, " .. args[2] .. ");"
+            return args[1] .. " = comgen_tocstr(L, " .. args[2] .. ");"
           end,
     push = function (args)
-             return "comgen_pushbstr(L, " .. args[1] .. ");"
+             return "comgen_pushcstr(L, " .. args[1] .. ");"
            end,
     clear = function (args)
-              return "SysFreeString(" .. args[1] .. ");"
+              return "comgen_clearcstr((LPSTR)" .. args[1] .. ");"
+            end,
+  },
+  wstring = {
+    ctype = function (type, attr)
+              if attr.ctype then return attr.ctype end
+              if attr["in"] and not attr.out and not attr.ref then
+                return "LPCWSTR"
+              else
+                return "LPWSTR"
+              end
+            end,
+    set = function (args)
+            return args[1] .. " = comgen_towstr(L, " .. args[2] .. ");"
+          end,
+    push = function (args)
+             return "comgen_pushwstr(L, " .. args[1] .. ");"
+           end,
+    clear = function (args)
+              return "comgen_clearwstr((wchar_t *)" .. args[1] .. ");"
             end,
   },
   tstring = {
@@ -422,23 +445,19 @@ comtypes = {
               return "comgen_cleartstr((TCHAR*)" .. args[1] .. ");"
             end,
   },
-  wstring = {
-    ctype = function (type, attr)
-              if attr.ctype then return attr.ctype end
-              if attr["in"] and not attr.out and not attr.ref then
-                return "LPCWSTR"
-              else
-                return "LPWSTR"
-              end
+  bstring = {
+    vt = "BSTR",
+    ctype = function (type)
+              return "BSTR"
             end,
     set = function (args)
-            return args[1] .. " = comgen_towstr(L, " .. args[2] .. ");"
+            return args[1] .. " = comgen_tobstr(L, " .. args[2] .. ");"
           end,
     push = function (args)
-             return "comgen_pushwstr(L, " .. args[1] .. ");"
+             return "comgen_pushbstr(L, " .. args[1] .. ");"
            end,
     clear = function (args)
-              return "comgen_clearwstr((wchar_t *)" .. args[1] .. ");"
+              return "comgen_clearbstr(" .. args[1] .. ");"
             end,
   },
   safearray = {
@@ -468,22 +487,6 @@ comtypes = {
               return "SafeArrayDestroy(" .. args[1] .. ");"
             end
   },
-  string = {
-    ctype = function (type, attr)
-              if attr.ctype then return attr.ctype end
-              if attr["in"] and not attr.out and not attr.ref then
-                return "LPCSTR"
-              else
-                return "LPSTR"
-              end
-            end,
-    set = function (args)
-            return args[1] .. " = (LPSTR)lua_tostring(L, " .. args[2] .. ");"
-          end,
-    push = function (args)
-             return "lua_pushstring(L, " .. args[1] .. ");"
-           end
-  },
   interface = {
     vt = "UNKNOWN",
     ctype = function (type)
@@ -497,11 +500,14 @@ comtypes = {
              local type = args[2]
              local attr = args[3]
              if attr and attr.iid_is then
-               return "comgen_pushinterface(L, " .. args[1] .. ", __" .. attr.iid_is .. "_siid);"
+               return args[1] .. "->AddRef(); comgen_pushinterface(L, " .. args[1] .. ", __" .. attr.iid_is .. "_siid);"
              else
-               return "comgen_pushinterface(L, " .. args[1] .. ", \"" .. type.iid .. "\");"
+               return args[1] .. "->AddRef(); comgen_pushinterface(L, " .. args[1] .. ", \"" .. type.iid .. "\");"
              end
            end,
+    clear = function (args)
+              return args[1] .. "->Release();"
+            end
   },
   refiid = {
     ctype = function (type)
@@ -663,20 +669,20 @@ function _M.compile_method(method)
       pdata.pass = "&" .. param.name
       pdata.push = comtypes[typename].push
     end
-    if attr.unique then
-      pdata.pass = "NULL"
-    end
     if attr.retval then
       mdata.nresults = mdata.nresults + 1
       pdata.pass = "&" .. param.name
       mdata.pushret = comtypes[typename].push{ param.name, param.type, param.attr }
     end
-    if attr["in"] and not attr.unique then
-      pos = pos + 1
-      pdata.set = comtypes[typename].set
-    end
-    if attr.ref and not attr.out and not attr.retval then
+    if (attr.ref or attr.unique) and not attr.out and not attr.retval then
       pdata.pass = "&" .. param.name
+    end
+    if attr["in"] then
+      if attr.unique then
+        pdata.pass = "(lua_isnil(L, "..pos..") ? NULL : "..pdata.pass..")"
+      end
+      pdata.set = comtypes[typename].set
+      pos = pos + 1
     end
     table.insert(mdata.parameters, pdata)
   end
@@ -773,8 +779,14 @@ function _M.compile_wrapper(name, interfaces)
 end
 
 function _M.compile(library)
+  local modname = library.luamodule
+  if modname == nil then
+    modname = library.modname
+  else
+    modname = string.gsub(modname, "%.", "_")
+  end
   local libdata = {
-    modname = library.modname,
+    modname = modname,
     header = library.header or library.modname,
     interfaces = {}, enums = library.enums or {},
     wrappers = {},
